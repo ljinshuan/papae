@@ -118,6 +118,10 @@ def main(
         else:
             click.echo(f"   ⚠ viewer.html 未找到: {viewer_html_src}", err=True)
 
+        video_dst = output / video.name
+        shutil.copy2(video, video_dst)
+        click.echo(f"   ✓ 输出: {video_dst}")
+
         click.echo("📝 步骤 6/6: 生成评估报告...")
         report_gen = ReportGenerator(config)
         report_path = report_gen.generate(assessment, gait_cycle, output)
