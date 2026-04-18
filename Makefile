@@ -1,4 +1,4 @@
-.PHONY: install test typecheck lint e2e clean help
+.PHONY: install test typecheck lint e2e e2e-full clean viewer help
 
 VENV = .venv
 PYTHON = uv run python
@@ -18,6 +18,7 @@ help:
 	@echo "  make lint        运行代码格式检查（ruff）"
 	@echo "  make e2e         端到端验证（跳过 LLM）"
 	@echo "  make e2e-full    端到端验证（含 LLM，需 API 密钥）"
+	@echo "  make viewer      运行 e2e 并自动打开 viewer.html"
 	@echo "  make clean       清理结果和缓存"
 	@echo "  make help        显示本帮助"
 
@@ -39,6 +40,10 @@ e2e:
 
 e2e-full:
 	$(CLI) --video $(VIDEO) --output $(OUTPUT)
+
+viewer: e2e
+	@echo "打开交互式查看器..."
+	@open $(OUTPUT)/viewer.html || xdg-open $(OUTPUT)/viewer.html || echo "请手动打开 $(OUTPUT)/viewer.html"
 
 clean:
 	rm -rf $(OUTPUT)/ e2e_results/ .pytest_cache/ .coverage htmlcov/
