@@ -81,6 +81,10 @@ htmlcov/
 logs/
 
 
-.omc
-data
-statee2e_results/
+.omc/
+data/
+state/
+e2e_results/
+custom_output/
+.superpowers/
+
