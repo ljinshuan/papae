@@ -272,6 +272,7 @@
         const videoHeight = ref(0);
 
         const frameData = ref([]);
+        const videoFileName = ref('video.mp4');
         const jsonError = ref('');
         const videoError = ref('');
 
@@ -305,7 +306,7 @@
             videoWidth.value = data.width || 0;
             videoHeight.value = data.height || 0;
             frameData.value = data.frames || [];
-            frameData.value._video_filename = data.viewer_video_filename || data.video_filename || 'video.mp4';
+            videoFileName.value = data.viewer_video_filename || data.video_filename || 'video.mp4';
           } catch (e) {
             jsonError.value = '加载 per-frame.json 失败：' + e.message;
           }
@@ -597,8 +598,7 @@
 
         onMounted(async () => {
           await loadData();
-          const vf = frameData.value._video_filename || 'video.mp4';
-          videoSrc.value = './' + vf;
+          videoSrc.value = './' + videoFileName.value;
           window.addEventListener('resize', () => {
             resizeCanvases();
             drawAll();
