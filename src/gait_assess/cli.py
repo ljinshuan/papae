@@ -10,6 +10,7 @@ import click
 import cv2
 
 from gait_assess.gait_analyzer import GaitAnalyzer
+from gait_assess.pose_utils import estimate_age_from_pose
 from gait_assess.llm_assessor import LLMAssessor, LLMError
 from gait_assess.models import AppConfig, AssessmentResult
 from gait_assess.pose_segmentor import PoseSegmentor
@@ -26,26 +27,26 @@ from gait_assess.visualizer import Visualizer
 @click.command()
 @click.option("--video", "-v", required=True, type=click.Path(exists=True, path_type=Path), help="输入视频文件路径")
 @click.option("--output", "-o", default="./results", type=click.Path(path_type=Path), help="输出目录")
-@click.option("--llm-api-key", default="", envvar="QWEN_API_KEY", help="LLM API 密钥")
-@click.option("--llm-model", default="qwen-vl-max", help="LLM 模型名称")
 @click.option("--yolo-pose-model", default="models/yolov8n-pose.pt", help="YOLO-pose 模型")
 @click.option("--yolo-seg-model", default="models/yolov8n-seg.pt", help="YOLO-seg 模型")
 @click.option("--conf-threshold", default=0.3, type=float, help="姿态检测置信度阈值")
 @click.option("--blur-threshold", default=100.0, type=float, help="模糊帧阈值")
 @click.option("--target-height", default=720, type=int, help="标准化目标高度")
 @click.option("--min-duration", default=3.0, type=float, help="视频最小时长（秒）")
+@click.option("--mode", default="gait", type=click.Choice(["gait", "developmental", "posture"]), help="评估模式")
+@click.option("--age-months", default=None, type=int, help="儿童月龄（月），用于 developmental 模式")
 @click.option("--skip-llm", is_flag=True, help="跳过 LLM 评估（仅生成可视化视频和报告）")
 def main(
     video: Path,
     output: Path,
-    llm_api_key: str,
-    llm_model: str,
     yolo_pose_model: str,
     yolo_seg_model: str,
     conf_threshold: float,
     blur_threshold: float,
     target_height: int,
     min_duration: float,
+    mode: str,
+    age_months: int | None,
     skip_llm: bool,
 ) -> None:
     """婴幼儿走路姿态评估工具。"""
@@ -55,14 +56,14 @@ def main(
     config = AppConfig(
         video=video,
         output=output,
-        llm_api_key=llm_api_key,
-        llm_model=llm_model,
         yolo_pose_model=yolo_pose_model,
         yolo_seg_model=yolo_seg_model,
         conf_threshold=conf_threshold,
         blur_threshold=blur_threshold,
         target_height=target_height,
         min_duration=min_duration,
+        assessment_mode=mode,
+        child_age_months=age_months,
     )
 
     try:
@@ -85,6 +86,13 @@ def main(
         click.echo(f"   ✓ 检测周期数: {len(gait_cycle.cycle_periods)}")
         click.echo(f"   ✓ 关键帧数: {len(gait_cycle.key_frames)}")
 
+        # 运动发育模式下，若未提供月龄则自动推断
+        if config.assessment_mode == "developmental" and config.child_age_months is None:
+            inferred_age = estimate_age_from_pose(frame_results)
+            if inferred_age is not None:
+                config.child_age_months = inferred_age
+                click.echo(f"   ✓ 推断月龄: {inferred_age} 个月")
+
         # 保存关键帧图像（供 LLM 和报告使用）
         for kf in gait_cycle.key_frames:
             if 0 <= kf.frame_index < len(frames):
@@ -101,7 +109,7 @@ def main(
         else:
             click.echo("🧠 步骤 4/6: LLM 评估...")
             assessor = LLMAssessor(config)
-            assessment = assessor.assess(gait_cycle)
+            assessment = assessor.assess(gait_cycle, video_path=video)
         click.echo(f"   ✓ 风险等级: {assessment.risk_level}")
 
         click.echo("🎨 步骤 5/6: 生成可视化视频...")

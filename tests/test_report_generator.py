@@ -74,14 +74,14 @@ class TestReportGenerator:
         sample_gait_cycle: GaitCycle,
         tmp_path: Path,
     ) -> None:
-        """验证不同风险等级使用正确的 Markdown 格式。"""
+        """验证不同风险等级使用正确的 HTML badge 格式。"""
         risk_levels = {
-            "正常": "✅ **正常**",
-            "轻微关注": "⚠️ **轻微关注**",
-            "建议就医": "🚨 **建议就医**",
+            "正常": "badge-risk-normal",
+            "轻微关注": "badge-risk-mild",
+            "建议就医": "badge-risk-significant",
         }
 
-        for level, expected_style in risk_levels.items():
+        for level, expected_class in risk_levels.items():
             assessment = AssessmentResult(
                 risk_level=level,
                 findings=[],
@@ -91,7 +91,8 @@ class TestReportGenerator:
             generator = ReportGenerator(config)
             report_path = generator.generate(assessment, sample_gait_cycle, tmp_path / level)
             content = report_path.read_text(encoding="utf-8")
-            assert expected_style in content
+            assert expected_class in content
+            assert level in content
 
     def test_keyframe_embedding(
         self,
@@ -100,23 +101,27 @@ class TestReportGenerator:
         sample_gait_cycle: GaitCycle,
         tmp_path: Path,
     ) -> None:
-        """验证关键帧图片被保存并在报告中被引用。"""
+        """验证关键帧图片保存为独立文件并以相对路径引用。"""
         generator = ReportGenerator(config)
         output_dir = tmp_path / "output"
         generator.generate(sample_assessment, sample_gait_cycle, output_dir)
 
-        keyframe_dir = output_dir / "keyframes"
-        assert keyframe_dir.exists()
-
-        for i, kf in enumerate(sample_gait_cycle.key_frames):
-            img_path = keyframe_dir / f"keyframe_{i:02d}_{kf.phase_name}.jpg"
-            assert img_path.exists()
-
         report_path = output_dir / "report.md"
         content = report_path.read_text(encoding="utf-8")
 
+        # 验证关键帧图片文件被写出
+        key_frames_dir = output_dir / "key_frames"
+        assert key_frames_dir.exists()
+        jpg_files = list(key_frames_dir.glob("*.jpg"))
+        assert len(jpg_files) == len(sample_gait_cycle.key_frames)
+
+        # 验证 Markdown 使用相对路径引用，而非 base64
+        assert "data:image/jpeg;base64," not in content
+        assert 'src="key_frames/frame_00.jpg"' in content
+        assert 'src="key_frames/frame_01.jpg"' in content
+
         for kf in sample_gait_cycle.key_frames:
-            assert f"![{kf.phase_name}]" in content
+            assert kf.phase_name in content
 
     def test_disclaimer_present(
         self,

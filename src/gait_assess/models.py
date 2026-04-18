@@ -39,6 +39,14 @@ class GaitCycle(BaseModel):
     metrics: dict[str, Any]
 
 
+class PoseMetrics(BaseModel):
+    """详细姿态指标。"""
+
+    joint_angles: dict[str, float] = Field(default_factory=dict)
+    symmetry_indices: dict[str, float] = Field(default_factory=dict)
+    temporal_trajectories: dict[str, list[float]] = Field(default_factory=dict)
+
+
 class AssessmentResult(BaseModel):
     """LLM 评估结果。"""
 
@@ -46,6 +54,8 @@ class AssessmentResult(BaseModel):
     findings: list[str]
     recommendations: list[str]
     raw_response: str
+    metrics_detail: dict[str, Any] = Field(default_factory=dict)
+    confidence_score: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class AppConfig(BaseSettings):
@@ -89,4 +99,10 @@ class AppConfig(BaseSettings):
     )
     min_duration: float = Field(
         default=3.0, ge=0.0, description="视频最小时长（秒）"
+    )
+    assessment_mode: str = Field(
+        default="gait", description="评估模式: gait/developmental/posture"
+    )
+    child_age_months: int | None = Field(
+        default=None, ge=0, le=36, description="儿童月龄（月）"
     )

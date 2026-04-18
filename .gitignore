@@ -88,3 +88,6 @@ e2e_results/
 custom_output/
 .superpowers/
 
+
+# openspec archives
+openspec/changes/archive/
