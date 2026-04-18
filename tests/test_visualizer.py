@@ -46,7 +46,7 @@ class TestVisualizer:
     def _create_dummy_video(self, path: Path, frames: int = 5) -> None:
         """创建合成视频文件。"""
         width, height = 320, 240
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[reportAttributeAccessIssue]
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # type: ignore[reportAttributeAccessIssue]
         writer = cv2.VideoWriter(str(path), fourcc, 30.0, (width, height))
         for _ in range(frames):
             frame = np.zeros((height, width, 3), dtype=np.uint8)

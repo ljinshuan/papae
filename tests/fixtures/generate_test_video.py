@@ -15,7 +15,7 @@ def generate_walking_video(
 
     画面中有一个矩形在水平方向上左右移动，模拟走路的周期性运动。
     """
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[reportAttributeAccessIssue]
+    fourcc = cv2.VideoWriter_fourcc(*"avc1")  # type: ignore[reportAttributeAccessIssue]
     writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     total_frames = int(duration * fps)

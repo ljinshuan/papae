@@ -44,7 +44,7 @@ class Visualizer:
         output_path = output_dir / "annotated_video.mp4"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[reportAttributeAccessIssue]
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # type: ignore[reportAttributeAccessIssue]
         writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
 
         key_frame_indices = {kf.frame_index for kf in gait_cycle.key_frames}
