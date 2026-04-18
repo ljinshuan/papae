@@ -1,5 +1,6 @@
 """命令行入口与流水线编排。"""
 
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -104,6 +105,19 @@ def main(
         video_path = visualizer.render(video, frame_results, gait_cycle, output)
         click.echo(f"   ✓ 输出: {video_path}")
 
+        click.echo("📦 生成交互式查看器数据...")
+        viewer_data_path = visualizer.generate_viewer_data(video, frame_results, output)
+        click.echo(f"   ✓ 输出: {viewer_data_path}")
+
+        viewer_html_src = Path(__file__).parent / "viewer.html"
+        viewer_html_dst = output / "viewer.html"
+        if viewer_html_src.exists():
+            output.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(viewer_html_src, viewer_html_dst)
+            click.echo(f"   ✓ 输出: {viewer_html_dst}")
+        else:
+            click.echo(f"   ⚠ viewer.html 未找到: {viewer_html_src}", err=True)
+
         click.echo("📝 步骤 6/6: 生成评估报告...")
         report_gen = ReportGenerator(config)
         report_path = report_gen.generate(assessment, gait_cycle, output)
@@ -119,6 +133,8 @@ def main(
         click.echo(f"   风险等级: {assessment.risk_level}")
         click.echo(f"   报告: {report_path}")
         click.echo(f"   可视化视频: {video_path}")
+        click.echo(f"   查看器数据: {viewer_data_path}")
+        click.echo(f"   查看器页面: {viewer_html_dst}")
         click.echo(f"   耗时: {elapsed:.1f}秒")
         click.echo("=" * 50)
 

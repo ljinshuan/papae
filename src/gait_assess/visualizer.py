@@ -1,5 +1,7 @@
 """可视化：骨架/mask 叠加、关键帧标记、视频编码。"""
 
+import base64
+import json
 from pathlib import Path
 
 import cv2
@@ -69,6 +71,61 @@ class Visualizer:
 
         cap.release()
         writer.release()
+
+        return output_path
+
+    def generate_viewer_data(
+        self,
+        video_path: Path,
+        frame_results: list[FrameResult],
+        output_dir: Path,
+    ) -> Path:
+        """将 frame_results 序列化为 per-frame.json，供交互式查看器使用。"""
+        cap = cv2.VideoCapture(str(video_path))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap.release()
+
+        frames: list[dict[str, object]] = []
+        for idx, fr in enumerate(frame_results):
+            frame_data: dict[str, object] = {"frame_index": idx}
+
+            has_detection = fr.bboxes.size > 0 and fr.keypoints.size > 0
+
+            if has_detection:
+                bbox = fr.bboxes[0].tolist()
+                frame_data["bbox"] = bbox
+                frame_data["bbox_label"] = f"({int(bbox[0])}, {int(bbox[1])})"
+                frame_data["keypoints"] = fr.keypoints[0].tolist()
+            else:
+                frame_data["bbox"] = []
+                frame_data["bbox_label"] = ""
+                frame_data["keypoints"] = None
+
+            if has_detection and fr.masks:
+                mask = fr.masks[0]
+                mask_uint8 = (mask * 255).astype(np.uint8)
+                _, encoded = cv2.imencode(".png", mask_uint8)
+                frame_data["mask"] = base64.b64encode(encoded).decode("utf-8")
+            else:
+                frame_data["mask"] = None
+
+            frames.append(frame_data)
+
+        output = {
+            "fps": fps,
+            "frame_count": len(frame_results),
+            "width": width,
+            "height": height,
+            "video_filename": video_path.name,
+            "frames": frames,
+        }
+
+        output_path = output_dir / "per-frame.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(output, f, ensure_ascii=False)
 
         return output_path
 

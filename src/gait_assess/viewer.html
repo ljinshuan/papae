@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>婴幼儿走路姿态评估 - 交互式查看器</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    }
+  }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Control Bar */
+    .control-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: #2d2d2d;
+      border-bottom: 1px solid #444;
+      flex-shrink: 0;
+    }
+    .control-bar button {
+      background: #444;
+      color: #e0e0e0;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .control-bar button:hover { background: #555; }
+    .control-bar button:active { background: #666; }
+    .control-bar .play-btn { font-size: 16px; padding: 8px 18px; }
+    .control-bar .step-btn { font-size: 18px; padding: 6px 12px; }
+    .control-bar select {
+      background: #444;
+      color: #e0e0e0;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .progress-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .progress-wrap input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #555;
+      border-radius: 3px;
+      outline: none;
+    }
+    .progress-wrap input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #4a9eff;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .progress-wrap input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: #4a9eff;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+    .frame-info {
+      font-size: 13px;
+      color: #aaa;
+      white-space: nowrap;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    /* Grid */
+    .grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 8px;
+      padding: 8px;
+      min-height: 0;
+    }
+    .panel {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .panel-label {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.7);
+      color: #ccc;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .panel canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Error overlay */
+    .error-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.85);
+      z-index: 20;
+      gap: 10px;
+    }
+    .error-overlay p { color: #ff6b6b; font-size: 14px; text-align: center; padding: 0 20px; }
+    .error-overlay button {
+      background: #444;
+      color: #e0e0e0;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .error-overlay button:hover { background: #555; }
+
+    /* No detection text inside canvas area */
+    .no-detection {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .no-detection span {
+      background: rgba(0,0,0,0.7);
+      color: #ffaa00;
+      font-size: 16px;
+      padding: 10px 18px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <video
+      ref="videoRef"
+      :src="videoSrc"
+      style="display:none"
+      @loadedmetadata="onLoaded"
+      @error="onVideoError"
+    ></video>
+
+    <div class="control-bar">
+      <button class="play-btn" @click="togglePlay">{{ isPlaying ? '⏸ 暂停' : '▶ 播放' }}</button>
+      <button class="step-btn" @click="stepFrame(-1)" title="上一帧">◀</button>
+      <button class="step-btn" @click="stepFrame(1)" title="下一帧">▶</button>
+      <select v-model="playbackRate" @change="onSpeedChange">
+        <option :value="0.5">0.5x</option>
+        <option :value="1">1x</option>
+        <option :value="2">2x</option>
+      </select>
+      <div class="progress-wrap">
+        <input
+          type="range"
+          :min="0"
+          :max="frameCount - 1"
+          :value="currentFrame"
+          @input="onScrub"
+        />
+        <span class="frame-info">帧 {{ currentFrame + 1 }} / {{ frameCount }}</span>
+      </div>
+    </div>
+
+    <div v-if="jsonError" class="error-overlay" style="position:fixed; inset:0;">
+      <p>{{ jsonError }}</p>
+      <button @click="loadData">重试</button>
+    </div>
+
+    <div v-if="videoError" class="error-overlay" style="position:fixed; inset:0;">
+      <p>{{ videoError }}</p>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <span class="panel-label">原始视频</span>
+        <canvas ref="canvas1"></canvas>
+      </div>
+      <div class="panel">
+        <span class="panel-label">检测框 + 坐标</span>
+        <canvas ref="canvas2"></canvas>
+        <div v-if="!hasDetection" class="no-detection"><span>未检测到人物</span></div>
+      </div>
+      <div class="panel">
+        <span class="panel-label">分割高亮</span>
+        <canvas ref="canvas3"></canvas>
+        <div v-if="!hasDetection" class="no-detection"><span>未检测到人物</span></div>
+      </div>
+      <div class="panel">
+        <span class="panel-label">姿态裁剪 (1:1)</span>
+        <canvas ref="canvas4"></canvas>
+        <div v-if="!hasDetection" class="no-detection"><span>未检测到人物</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createApp, ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+
+    const COCO_SKELETON = [
+      [0, 1], [0, 2], [1, 3], [2, 4],
+      [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
+      [5, 11], [6, 12], [11, 12],
+      [11, 13], [13, 15], [12, 14], [14, 16],
+    ];
+
+    const COLORS = [
+      [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0],
+      [255, 0, 255], [0, 255, 255], [128, 0, 128], [255, 165, 0],
+    ];
+
+    createApp({
+      setup() {
+        const videoRef = ref(null);
+        const canvas1 = ref(null);
+        const canvas2 = ref(null);
+        const canvas3 = ref(null);
+        const canvas4 = ref(null);
+
+        const videoSrc = ref('');
+        const isPlaying = ref(false);
+        const playbackRate = ref(1);
+        const currentFrame = ref(0);
+        const frameCount = ref(0);
+        const fps = ref(30);
+        const videoWidth = ref(0);
+        const videoHeight = ref(0);
+
+        const frameData = ref([]);
+        const jsonError = ref('');
+        const videoError = ref('');
+
+        const hasDetection = computed(() => {
+          const fd = frameData.value[currentFrame.value];
+          return fd && fd.bbox && fd.bbox.length === 4;
+        });
+
+        let rafId = null;
+        let lastDrawnFrame = -1;
+
+        function resizeCanvases() {
+          const panels = document.querySelectorAll('.panel');
+          [canvas1, canvas2, canvas3, canvas4].forEach((c, i) => {
+            const el = c.value;
+            if (!el) return;
+            const rect = panels[i].getBoundingClientRect();
+            el.width = rect.width;
+            el.height = rect.height;
+          });
+        }
+
+        async function loadData() {
+          jsonError.value = '';
+          try {
+            const res = await fetch('./per-frame.json');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            fps.value = data.fps || 30;
+            frameCount.value = data.frame_count || 0;
+            videoWidth.value = data.width || 0;
+            videoHeight.value = data.height || 0;
+            frameData.value = data.frames || [];
+            frameData.value._video_filename = data.video_filename || 'video.mp4';
+          } catch (e) {
+            jsonError.value = '加载 per-frame.json 失败：' + e.message;
+          }
+        }
+
+        function onLoaded() {
+          const v = videoRef.value;
+          if (!v) return;
+          if (v.duration && !frameCount.value) {
+            frameCount.value = Math.floor(v.duration * fps.value) || Math.floor(v.duration * 30);
+          }
+          resizeCanvases();
+          drawAll();
+        }
+
+        function onVideoError() {
+          videoError.value = '加载视频失败，请检查视频文件是否存在。';
+        }
+
+        function onSpeedChange() {
+          const v = videoRef.value;
+          if (v) v.playbackRate = playbackRate.value;
+        }
+
+        function togglePlay() {
+          const v = videoRef.value;
+          if (!v) return;
+          if (v.paused) {
+            v.playbackRate = playbackRate.value;
+            v.play();
+            isPlaying.value = true;
+            startRaf();
+          } else {
+            v.pause();
+            isPlaying.value = false;
+            stopRaf();
+            syncFrame();
+            drawAll();
+          }
+        }
+
+        function stepFrame(delta) {
+          const v = videoRef.value;
+          if (!v || !frameCount.value) return;
+          v.pause();
+          isPlaying.value = false;
+          stopRaf();
+          let next = currentFrame.value + delta;
+          next = Math.max(0, Math.min(next, frameCount.value - 1));
+          v.currentTime = next / fps.value;
+          currentFrame.value = next;
+          drawAll();
+        }
+
+        function onScrub(e) {
+          const v = videoRef.value;
+          if (!v || !frameCount.value) return;
+          v.pause();
+          isPlaying.value = false;
+          stopRaf();
+          const frame = parseInt(e.target.value, 10);
+          v.currentTime = frame / fps.value;
+          currentFrame.value = frame;
+          drawAll();
+        }
+
+        function syncFrame() {
+          const v = videoRef.value;
+          if (!v || !fps.value) return;
+          const frame = Math.floor(v.currentTime * fps.value);
+          if (frame !== currentFrame.value) {
+            currentFrame.value = Math.max(0, Math.min(frame, frameCount.value - 1));
+          }
+        }
+
+        function startRaf() {
+          stopRaf();
+          const loop = () => {
+            syncFrame();
+            if (currentFrame.value !== lastDrawnFrame) {
+              drawAll();
+            }
+            if (isPlaying.value) {
+              rafId = requestAnimationFrame(loop);
+            }
+          };
+          rafId = requestAnimationFrame(loop);
+        }
+
+        function stopRaf() {
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+        }
+
+        function drawAll() {
+          const v = videoRef.value;
+          if (!v) return;
+          const frame = currentFrame.value;
+          lastDrawnFrame = frame;
+
+          const fd = frameData.value[frame] || null;
+          const bbox = fd && fd.bbox && fd.bbox.length === 4 ? fd.bbox : null;
+          const keypoints = fd && fd.keypoints ? fd.keypoints : null;
+          const mask = fd && fd.mask ? fd.mask : null;
+
+          drawPanel1(v);
+          drawPanel2(v, bbox);
+          drawPanel3(v, bbox, mask);
+          drawPanel4(v, bbox, keypoints);
+        }
+
+        function drawPanel1(video) {
+          const canvas = canvas1.value;
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          fitImage(ctx, video, canvas.width, canvas.height);
+        }
+
+        function drawPanel2(video, bbox) {
+          const canvas = canvas2.value;
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          fitImage(ctx, video, canvas.width, canvas.height);
+          if (!bbox) return;
+          const [x1, y1, x2, y2] = bbox;
+          const scale = getScale(canvas.width, canvas.height, videoWidth.value, videoHeight.value);
+          const sx = scale.sx;
+          const sy = scale.sy;
+          const ox = scale.ox;
+          const oy = scale.oy;
+          ctx.strokeStyle = '#00ff88';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(ox + x1 * sx, oy + y1 * sy, (x2 - x1) * sx, (y2 - y1) * sy);
+          ctx.fillStyle = '#00ff88';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillText(`(${x1}, ${y1})`, ox + x1 * sx, oy + y1 * sy - 5);
+        }
+
+        const maskCache = new Map();
+
+        function getMaskImage(mask) {
+          if (!mask) return null;
+          if (maskCache.has(mask)) return maskCache.get(mask);
+          const img = new Image();
+          img.src = mask.startsWith('data:') ? mask : 'data:image/png;base64,' + mask;
+          maskCache.set(mask, img);
+          return img;
+        }
+
+        function drawPanel3(video, bbox, mask) {
+          const canvas = canvas3.value;
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          fitImage(ctx, video, canvas.width, canvas.height);
+          if (!bbox) return;
+
+          const scale = getScale(canvas.width, canvas.height, videoWidth.value, videoHeight.value);
+          const sx = scale.sx;
+          const sy = scale.sy;
+          const ox = scale.ox;
+          const oy = scale.oy;
+
+          const img = getMaskImage(mask);
+          if (img && img.complete && img.naturalWidth > 0) {
+            const off = document.createElement('canvas');
+            off.width = img.width;
+            off.height = img.height;
+            const octx = off.getContext('2d');
+            octx.drawImage(img, 0, 0);
+            octx.globalCompositeOperation = 'source-in';
+            octx.fillStyle = 'rgba(128, 0, 128, 0.3)';
+            octx.fillRect(0, 0, off.width, off.height);
+            ctx.drawImage(off, ox, oy, videoWidth.value * sx, videoHeight.value * sy);
+          }
+
+          ctx.strokeStyle = '#00ff88';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(ox + bbox[0] * sx, oy + bbox[1] * sy, (bbox[2] - bbox[0]) * sx, (bbox[3] - bbox[1]) * sy);
+
+          if (!mask) {
+            ctx.fillStyle = '#ffaa00';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText('无分割数据', ox + bbox[0] * sx, oy + bbox[1] * sy - 5);
+          }
+        }
+
+        function drawPanel4(video, bbox, keypoints) {
+          const canvas = canvas4.value;
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          if (!bbox) return;
+
+          const [bx, by, bwRaw, bhRaw] = bbox;
+          const bw = bwRaw - bx;
+          const bh = bhRaw - by;
+
+          const panelAspect = canvas.width / canvas.height;
+          const cropAspect = bw / bh;
+          let dw, dh;
+          if (panelAspect > cropAspect) {
+            dh = canvas.height;
+            dw = dh * cropAspect;
+          } else {
+            dw = canvas.width;
+            dh = dw / cropAspect;
+          }
+          const dx = (canvas.width - dw) / 2;
+          const dy = (canvas.height - dh) / 2;
+
+          ctx.drawImage(video, bx, by, bw, bh, dx, dy, dw, dh);
+
+          if (keypoints && keypoints.length) {
+            const scaleX = dw / bw;
+            const scaleY = dh / bh;
+            drawSkeleton(ctx, keypoints, dx - bx * scaleX, dy - by * scaleY, scaleX, scaleY);
+          }
+        }
+
+        function drawSkeleton(ctx, keypoints, offsetX, offsetY, scaleX, scaleY) {
+          for (let i = 0; i < COCO_SKELETON.length; i++) {
+            const [start, end] = COCO_SKELETON[i];
+            const kp1 = keypoints[start];
+            const kp2 = keypoints[end];
+            if (!kp1 || !kp2 || kp1[2] <= 0.1 || kp2[2] <= 0.1) continue;
+            const x1 = kp1[0] * scaleX + offsetX;
+            const y1 = kp1[1] * scaleY + offsetY;
+            const x2 = kp2[0] * scaleX + offsetX;
+            const y2 = kp2[1] * scaleY + offsetY;
+            const color = COLORS[i % COLORS.length];
+            ctx.strokeStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+
+          for (let i = 0; i < keypoints.length; i++) {
+            const kp = keypoints[i];
+            if (!kp || kp[2] <= 0.1) continue;
+            const x = kp[0] * scaleX + offsetX;
+            const y = kp[1] * scaleY + offsetY;
+            const conf = kp[2];
+            ctx.fillStyle = conf >= 0.5 ? '#00ff00' : '#00ffff';
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        function fitImage(ctx, img, cw, ch) {
+          const imgAspect = img.videoWidth / img.videoHeight;
+          const panelAspect = cw / ch;
+          let dw, dh;
+          if (panelAspect > imgAspect) {
+            dh = ch;
+            dw = dh * imgAspect;
+          } else {
+            dw = cw;
+            dh = dw / imgAspect;
+          }
+          const dx = (cw - dw) / 2;
+          const dy = (ch - dh) / 2;
+          ctx.drawImage(img, dx, dy, dw, dh);
+        }
+
+        function getScale(cw, ch, vw, vh) {
+          if (!vw || !vh) return { sx: 1, sy: 1, ox: 0, oy: 0 };
+          const imgAspect = vw / vh;
+          const panelAspect = cw / ch;
+          let dw, dh;
+          if (panelAspect > imgAspect) {
+            dh = ch;
+            dw = dh * imgAspect;
+          } else {
+            dw = cw;
+            dh = dw / imgAspect;
+          }
+          const dx = (cw - dw) / 2;
+          const dy = (ch - dh) / 2;
+          return { sx: dw / vw, sy: dh / vh, ox: dx, oy: dy };
+        }
+
+        onMounted(async () => {
+          await loadData();
+          const vf = frameData.value._video_filename || 'video.mp4';
+          videoSrc.value = './' + vf;
+          window.addEventListener('resize', () => {
+            resizeCanvases();
+            drawAll();
+          });
+          await nextTick();
+          resizeCanvases();
+        });
+
+        onUnmounted(() => {
+          stopRaf();
+        });
+
+        return {
+          videoRef,
+          canvas1,
+          canvas2,
+          canvas3,
+          canvas4,
+          videoSrc,
+          isPlaying,
+          playbackRate,
+          currentFrame,
+          frameCount,
+          jsonError,
+          videoError,
+          hasDetection,
+          togglePlay,
+          stepFrame,
+          onSpeedChange,
+          onScrub,
+          onLoaded,
+          onVideoError,
+          loadData,
+        };
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>

@@ -144,3 +144,158 @@ class TestVisualizer:
             args = mock_putText.call_args_list[0][0]
             assert args[1] == "★ 站立中期"
             assert args[3] == cv2.FONT_HERSHEY_SIMPLEX
+
+
+class TestGenerateViewerData:
+    """generate_viewer_data() 测试。"""
+
+    @pytest.fixture
+    def config(self) -> AppConfig:
+        return AppConfig(video=Path("dummy.mp4"))
+
+    def _create_dummy_video(self, path: Path, frames: int = 5) -> None:
+        """创建合成视频文件。"""
+        width, height = 320, 240
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # type: ignore[reportAttributeAccessIssue]
+        writer = cv2.VideoWriter(str(path), fourcc, 30.0, (width, height))
+        for _ in range(frames):
+            frame = np.zeros((height, width, 3), dtype=np.uint8)
+            writer.write(frame)
+        writer.release()
+
+    def test_json_structure(self, config: AppConfig, tmp_path: Path) -> None:
+        """验证 JSON 输出包含顶层字段和 frames 数组。"""
+        video_path = tmp_path / "input.mp4"
+        self._create_dummy_video(video_path)
+        output_dir = tmp_path / "output"
+
+        kpts = np.zeros((1, 17, 3))
+        for i in range(17):
+            kpts[0, i] = [50 + i * 10, 100 + (i % 3) * 20, 0.8]
+        frame_results = [
+            FrameResult(keypoints=kpts, masks=[], bboxes=np.array([[40, 80, 220, 160]]))
+        ]
+
+        visualizer = Visualizer(config)
+        result_path = visualizer.generate_viewer_data(video_path, frame_results, output_dir)
+
+        assert result_path.exists()
+        assert result_path.name == "per-frame.json"
+
+        import json
+        with open(result_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        assert "fps" in data
+        assert "frame_count" in data
+        assert "width" in data
+        assert "height" in data
+        assert "video_filename" in data
+        assert "frames" in data
+        assert isinstance(data["frames"], list)
+        assert data["frame_count"] == len(frame_results)
+
+    def test_frame_fields(self, config: AppConfig, tmp_path: Path) -> None:
+        """验证每帧包含必需字段。"""
+        video_path = tmp_path / "input.mp4"
+        self._create_dummy_video(video_path)
+        output_dir = tmp_path / "output"
+
+        kpts = np.zeros((1, 17, 3))
+        for i in range(17):
+            kpts[0, i] = [50 + i * 10, 100, 0.8]
+        frame_results = [
+            FrameResult(keypoints=kpts, masks=[], bboxes=np.array([[40, 80, 220, 160]]))
+        ]
+
+        visualizer = Visualizer(config)
+        result_path = visualizer.generate_viewer_data(video_path, frame_results, output_dir)
+
+        import json
+        with open(result_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        frame = data["frames"][0]
+        assert "frame_index" in frame
+        assert "bbox" in frame
+        assert "bbox_label" in frame
+        assert "keypoints" in frame
+        assert "mask" in frame
+
+    def test_empty_detection(self, config: AppConfig, tmp_path: Path) -> None:
+        """验证空检测帧输出空 bbox 和 null keypoints/mask。"""
+        video_path = tmp_path / "input.mp4"
+        self._create_dummy_video(video_path)
+        output_dir = tmp_path / "output"
+
+        frame_results = [
+            FrameResult(keypoints=np.zeros((0, 17, 3)), masks=[], bboxes=np.zeros((0, 4)))
+        ]
+
+        visualizer = Visualizer(config)
+        result_path = visualizer.generate_viewer_data(video_path, frame_results, output_dir)
+
+        import json
+        with open(result_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        frame = data["frames"][0]
+        assert frame["bbox"] == []
+        assert frame["bbox_label"] == ""
+        assert frame["keypoints"] is None
+        assert frame["mask"] is None
+
+    def test_non_empty_detection(self, config: AppConfig, tmp_path: Path) -> None:
+        """验证非空检测帧输出 4 值 bbox 和 17x3 keypoints。"""
+        video_path = tmp_path / "input.mp4"
+        self._create_dummy_video(video_path)
+        output_dir = tmp_path / "output"
+
+        kpts = np.zeros((1, 17, 3))
+        for i in range(17):
+            kpts[0, i] = [50 + i * 10, 100, 0.8]
+        frame_results = [
+            FrameResult(keypoints=kpts, masks=[], bboxes=np.array([[40, 80, 220, 160]]))
+        ]
+
+        visualizer = Visualizer(config)
+        result_path = visualizer.generate_viewer_data(video_path, frame_results, output_dir)
+
+        import json
+        with open(result_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        frame = data["frames"][0]
+        assert len(frame["bbox"]) == 4
+        assert frame["keypoints"] is not None
+        assert len(frame["keypoints"]) == 17
+        assert all(len(kp) == 3 for kp in frame["keypoints"])
+
+    def test_mask_encoding(self, config: AppConfig, tmp_path: Path) -> None:
+        """验证 mask 存在时为非空 base64 字符串。"""
+        video_path = tmp_path / "input.mp4"
+        self._create_dummy_video(video_path)
+        output_dir = tmp_path / "output"
+
+        kpts = np.zeros((1, 17, 3))
+        kpts[0, 0] = [50, 100, 0.9]
+        mask = np.ones((240, 320), dtype=np.float32) * 0.5
+        frame_results = [
+            FrameResult(
+                keypoints=kpts,
+                masks=[mask],
+                bboxes=np.array([[40, 80, 100, 120]]),
+            )
+        ]
+
+        visualizer = Visualizer(config)
+        result_path = visualizer.generate_viewer_data(video_path, frame_results, output_dir)
+
+        import json
+        with open(result_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        frame = data["frames"][0]
+        assert frame["mask"] is not None
+        assert isinstance(frame["mask"], str)
+        assert len(frame["mask"]) > 0

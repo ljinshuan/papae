@@ -78,6 +78,7 @@ class TestCLI:
 
             mock_visualizer_instance = MagicMock()
             mock_visualizer_instance.render.return_value = Path("video.mp4")
+            mock_visualizer_instance.generate_viewer_data.return_value = Path("per-frame.json")
             mock_visualizer.return_value = mock_visualizer_instance
 
             mock_report_gen_instance = MagicMock()
@@ -237,6 +238,7 @@ class TestCLI:
 
             mock_visualizer_instance = MagicMock()
             mock_visualizer_instance.render.return_value = Path("output/video.mp4")
+            mock_visualizer_instance.generate_viewer_data.return_value = Path("output/per-frame.json")
             mock_visualizer.return_value = mock_visualizer_instance
 
             mock_report_gen_instance = MagicMock()
