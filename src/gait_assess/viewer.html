@@ -315,6 +315,7 @@
         function onLoaded() {
           const v = videoRef.value;
           if (!v) return;
+          videoError.value = '';
           if (v.duration && !frameCount.value) {
             frameCount.value = Math.floor(v.duration * fps.value) || Math.floor(v.duration * 30);
           }
