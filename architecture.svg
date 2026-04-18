@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 880" width="960" height="880">
+  <style>
+    text { font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+  <defs>
+    <marker id="arrow-2563eb" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-16a34a" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+    </marker>
+    <marker id="arrow-9333ea" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/>
+    </marker>
+    <marker id="arrow-6b7280" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+  </defs>
+  <rect width="960" height="880" fill="#ffffff"/>
+  <text x="480" y="32" text-anchor="middle" fill="#111827" font-size="18" font-weight="600">婴幼儿姿态评估系统架构</text>
+  <text x="80" y="40" fill="#9ca3af" font-size="10" font-weight="600" letter-spacing="0.08em">输入层</text>
+  <text x="80" y="140" fill="#9ca3af" font-size="10" font-weight="600" letter-spacing="0.08em">预处理层</text>
+  <text x="80" y="240" fill="#9ca3af" font-size="10" font-weight="600" letter-spacing="0.08em">AI 推理层</text>
+  <text x="80" y="340" fill="#9ca3af" font-size="10" font-weight="600" letter-spacing="0.08em">分析层</text>
+  <text x="80" y="440" fill="#9ca3af" font-size="10" font-weight="600" letter-spacing="0.08em">评估层</text>
+  <text x="80" y="540" fill="#9ca3af" font-size="10" font-weight="600" letter-spacing="0.08em">可视化层</text>
+  <text x="80" y="640" fill="#9ca3af" font-size="10" font-weight="600" letter-spacing="0.08em">输出层</text>
+  <rect x="200" y="60" width="160" height="60" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="280.0" y="86.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">cli.py</text>
+  <text x="280.0" y="104.0" text-anchor="middle" fill="#6b7280" font-size="10">命令行入口 &amp; amp; 流水线编排</text>
+  <rect x="200" y="160" width="160" height="60" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="280.0" y="186.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">preprocessor.py</text>
+  <text x="280.0" y="204.0" text-anchor="middle" fill="#6b7280" font-size="10">视频拆帧 / 模糊过滤 / 标准化</text>
+  <rect x="200" y="260" width="160" height="60" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="280.0" y="286.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">pose_segmentor.py</text>
+  <text x="280.0" y="304.0" text-anchor="middle" fill="#6b7280" font-size="10">YOLO-pose + YOLO-seg 推理</text>
+  <rect x="200" y="380" width="160" height="60" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="280.0" y="406.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">gait_analyzer.py</text>
+  <text x="280.0" y="424.0" text-anchor="middle" fill="#6b7280" font-size="10">步态周期检测 / 关键帧提取</text>
+  <rect x="200" y="480" width="160" height="60" rx="8" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5"/>
+  <text x="280.0" y="506.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">llm_assessor.py</text>
+  <text x="280.0" y="524.0" text-anchor="middle" fill="#6b7280" font-size="10">多模态 LLM 调用 / Jinja2 渲染</text>
+  <rect x="200" y="580" width="160" height="60" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="280.0" y="606.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">visualizer.py</text>
+  <text x="280.0" y="624.0" text-anchor="middle" fill="#6b7280" font-size="10">骨架/mask 叠加 / 视频编码</text>
+  <rect x="200" y="680" width="160" height="60" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+  <text x="280.0" y="706.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">report_generator.py</text>
+  <text x="280.0" y="724.0" text-anchor="middle" fill="#6b7280" font-size="10">Markdown 报告生成（多模式）</text>
+  <rect x="480" y="160" width="140" height="50" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+  <text x="550.0" y="181.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">models.py</text>
+  <text x="550.0" y="199.0" text-anchor="middle" fill="#6b7280" font-size="10">Pydantic 数据模型</text>
+  <rect x="480" y="380" width="140" height="50" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+  <text x="550.0" y="401.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">pose_utils.py</text>
+  <text x="550.0" y="419.0" text-anchor="middle" fill="#6b7280" font-size="10">关节角度 / 对称性 / 轨迹</text>
+  <rect x="480" y="480" width="140" height="50" rx="8" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5"/>
+  <text x="550.0" y="501.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">prompts/</text>
+  <text x="550.0" y="519.0" text-anchor="middle" fill="#6b7280" font-size="10">Jinja2 模板</text>
+  <rect x="660" y="480" width="120" height="50" rx="8" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5"/>
+  <text x="720.0" y="501.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">Qwen-VL</text>
+  <text x="720.0" y="519.0" text-anchor="middle" fill="#6b7280" font-size="10">全模态 LLM API</text>
+  <rect x="480" y="260" width="140" height="50" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+  <text x="550.0" y="281.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">YOLO Models</text>
+  <text x="550.0" y="299.0" text-anchor="middle" fill="#6b7280" font-size="10">yolov8n-pose / yolov8n-seg</text>
+  <rect x="80" y="780" width="120" height="50" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+  <text x="140.0" y="801.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">report.md</text>
+  <text x="140.0" y="819.0" text-anchor="middle" fill="#6b7280" font-size="10">Markdown 评估报告</text>
+  <rect x="220" y="780" width="120" height="50" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+  <text x="280.0" y="801.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">output_video.mp4</text>
+  <text x="280.0" y="819.0" text-anchor="middle" fill="#6b7280" font-size="10">骨架叠加视频</text>
+  <rect x="360" y="780" width="120" height="50" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+  <text x="420.0" y="801.0" text-anchor="middle" fill="#111827" font-size="13" font-weight="600">viewer.html</text>
+  <text x="420.0" y="819.0" text-anchor="middle" fill="#6b7280" font-size="10">交互式查看器</text>
+  <path d="M 280.0,120 L 280.0,160" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arrow-2563eb)"/>
+  <path d="M 280.0,220 L 280.0,260" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arrow-2563eb)"/>
+  <path d="M 280.0,320 L 280.0,380" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arrow-2563eb)"/>
+  <rect x="284.0" y="340.0" width="99" height="16" fill="#ffffff" opacity="0.9" rx="2"/>
+  <text x="288.0" y="353.0" fill="#6b7280" font-size="10">FrameResult[]</text>
+  <path d="M 280.0,440 L 280.0,480" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arrow-2563eb)"/>
+  <rect x="284.0" y="450.0" width="71" height="16" fill="#ffffff" opacity="0.9" rx="2"/>
+  <text x="288.0" y="463.0" fill="#6b7280" font-size="10">GaitCycle</text>
+  <path d="M 280.0,540 L 280.0,580" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arrow-2563eb)"/>
+  <rect x="284.0" y="550.0" width="120" height="16" fill="#ffffff" opacity="0.9" rx="2"/>
+  <text x="288.0" y="563.0" fill="#6b7280" font-size="10">AssessmentResult</text>
+  <path d="M 280.0,640 L 280.0,680" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arrow-2563eb)"/>
+  <path d="M 200,710.0 L 200,805.0" stroke="#16a34a" stroke-width="1.5" fill="none" marker-end="url(#arrow-16a34a)"/>
+  <path d="M 280.0,740 L 280.0,780" stroke="#16a34a" stroke-width="1.5" fill="none" marker-end="url(#arrow-16a34a)"/>
+  <path d="M 280.0,740 L 280.0,780 L 420.0,780" stroke="#16a34a" stroke-width="1.5" fill="none" marker-end="url(#arrow-16a34a)"/>
+  <path d="M 480,285.0 L 360,290.0" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#arrow-6b7280)" stroke-dasharray="5,3"/>
+  <path d="M 480,405.0 L 360,410.0" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#arrow-6b7280)" stroke-dasharray="5,3"/>
+  <path d="M 480,185.0 L 360,190.0" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#arrow-6b7280)" stroke-dasharray="5,3"/>
+  <path d="M 480,505.0 L 360,510.0" stroke="#9333ea" stroke-width="1.5" fill="none" marker-end="url(#arrow-9333ea)" stroke-dasharray="5,3"/>
+  <path d="M 660,505.0 L 360,510.0" stroke="#9333ea" stroke-width="1.5" fill="none" marker-end="url(#arrow-9333ea)" stroke-dasharray="5,3"/>
+  <g transform="translate(720, 40)">
+    <rect x="0" y="0" width="200" height="90" rx="6" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+    <text x="10" y="18" fill="#374151" font-size="11" font-weight="600">图例</text>
+    <line x1="10" y1="35" x2="40" y2="35" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-2563eb)"/>
+    <text x="46" y="39" fill="#6b7280" font-size="11">主数据流</text>
+    <line x1="10" y1="55" x2="40" y2="55" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="46" y="59" fill="#6b7280" font-size="11">辅助依赖</text>
+    <line x1="10" y1="75" x2="40" y2="75" stroke="#9333ea" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="46" y="79" fill="#6b7280" font-size="11">LLM 依赖</text>
+  </g>
+</svg>
