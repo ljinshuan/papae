@@ -1,5 +1,7 @@
 """LLM 评估测试。"""
 
+from pathlib import Path
+
 import pytest
 
 from gait_assess.llm_assessor import LLMAssessor
@@ -11,7 +13,7 @@ class TestLLMAssessor:
 
     @pytest.fixture
     def config(self) -> AppConfig:
-        return AppConfig(video="dummy.mp4", llm_api_key="test-key")
+        return AppConfig(video=Path("dummy.mp4"), llm_api_key="test-key")
 
     def test_parse_response_standard(self, config: AppConfig) -> None:
         """测试标准格式响应解析。"""

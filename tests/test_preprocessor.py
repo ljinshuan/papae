@@ -1,5 +1,7 @@
 """视频预处理测试。"""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -17,13 +19,13 @@ class TestVideoPreprocessor:
 
     @pytest.fixture
     def config(self) -> AppConfig:
-        return AppConfig(video="dummy.mp4", blur_threshold=50.0, min_duration=1.0)
+        return AppConfig(video=Path("dummy.mp4"), blur_threshold=50.0, min_duration=1.0)
 
     def test_video_not_found(self, config: AppConfig, tmp_path: str) -> None:
         """测试不存在的视频文件。"""
         preprocessor = VideoPreprocessor(config)
         with pytest.raises(VideoNotFoundError):
-            preprocessor.process(tmp_path / "not_exist.mp4")
+            preprocessor.process(Path(tmp_path) / "not_exist.mp4")
 
     def test_blur_detection(self, config: AppConfig) -> None:
         """测试模糊帧过滤。"""

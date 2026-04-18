@@ -33,6 +33,14 @@ uv pip install -e ".[dev]"
 uv run gait-assess --video ./baby.mp4 --output ./results/
 ```
 
+## Model Weights
+
+YOLO 模型权重文件（*.pt）存放于 `models/` 目录，默认配置自动使用该目录下的模型：
+- `models/yolov8n-pose.pt` — 姿态检测
+- `models/yolov8n-seg.pt` — 人体分割
+
+首次运行时会自动下载（需联网）。也可手动下载后放入该目录。
+
 ## Architecture
 
 单向流水线（Pipeline），7 个组件依次执行：
@@ -70,6 +78,7 @@ src/gait_assess/
   llm_assessor.py     # 多模态 LLM 调用与解析
   visualizer.py       # 骨架/mask 叠加、视频编码
   report_generator.py # Markdown 报告生成
+models/               # YOLO 模型权重文件（*.pt，被 .gitignore 忽略）
 tests/
   fixtures/           # 测试视频
   test_*.py

@@ -1,5 +1,7 @@
 """步态分析测试。"""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -12,7 +14,7 @@ class TestGaitAnalyzer:
 
     @pytest.fixture
     def config(self) -> AppConfig:
-        return AppConfig(video="dummy.mp4")
+        return AppConfig(video=Path("dummy.mp4"))
 
     @pytest.fixture
     def frame_results(self) -> list[FrameResult]:

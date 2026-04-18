@@ -23,10 +23,10 @@ from gait_assess.visualizer import Visualizer
 @click.command()
 @click.option("--video", "-v", required=True, type=click.Path(exists=True, path_type=Path), help="输入视频文件路径")
 @click.option("--output", "-o", default="./results", type=click.Path(path_type=Path), help="输出目录")
-@click.option("--llm-api-key", envvar="QWEN_API_KEY", help="LLM API 密钥")
+@click.option("--llm-api-key", default="", envvar="QWEN_API_KEY", help="LLM API 密钥")
 @click.option("--llm-model", default="qwen-vl-max", help="LLM 模型名称")
-@click.option("--yolo-pose-model", default="yolov8n-pose.pt", help="YOLO-pose 模型")
-@click.option("--yolo-seg-model", default="yolov8n-seg.pt", help="YOLO-seg 模型")
+@click.option("--yolo-pose-model", default="models/yolov8n-pose.pt", help="YOLO-pose 模型")
+@click.option("--yolo-seg-model", default="models/yolov8n-seg.pt", help="YOLO-seg 模型")
 @click.option("--conf-threshold", default=0.3, type=float, help="姿态检测置信度阈值")
 @click.option("--blur-threshold", default=100.0, type=float, help="模糊帧阈值")
 @click.option("--target-height", default=720, type=int, help="标准化目标高度")
@@ -79,9 +79,9 @@ def main(
         click.echo(f"   ✓ 关键帧数: {len(gait_cycle.key_frames)}")
 
         # 保存关键帧图像（供 LLM 和报告使用）
-        for i, kf in enumerate(gait_cycle.key_frames):
-            if i < len(frames):
-                kf.image = frames[i]
+        for kf in gait_cycle.key_frames:
+            if 0 <= kf.frame_index < len(frames):
+                kf.image = frames[kf.frame_index]
 
         click.echo("🧠 步骤 4/6: LLM 评估...")
         assessor = LLMAssessor(config)
@@ -114,6 +114,9 @@ def main(
     except (VideoNotFoundError, VideoTooShortError, VideoQualityError) as e:
         click.echo(f"❌ 视频错误: {e}", err=True)
         exit_code = 3
+    except LLMError as e:
+        click.echo(f"❌ LLM 错误: {e}", err=True)
+        exit_code = 5
     except Exception as e:
         click.echo(f"❌ 错误: {e}", err=True)
         exit_code = 1
