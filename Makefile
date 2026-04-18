@@ -10,7 +10,7 @@ VIDEO ?= data/test_data.mp4
 OUTPUT ?= ./results
 
 help:
-	@echo "婴幼儿走路姿态评估系统 - 常用命令"
+	@echo "婴幼儿姿态评估系统 - 常用命令"
 	@echo ""
 	@echo "  make install     安装依赖（含开发依赖）"
 	@echo "  make test        运行全部测试"
