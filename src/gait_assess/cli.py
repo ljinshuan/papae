@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 import click
+import cv2
 
 from gait_assess.gait_analyzer import GaitAnalyzer
 from gait_assess.llm_assessor import LLMAssessor, LLMError
@@ -108,6 +109,12 @@ def main(
 
         click.echo("📦 生成交互式查看器数据...")
 
+        # 计算预处理缩放比例（将坐标还原到原始视频尺寸）
+        cap = cv2.VideoCapture(str(video))
+        original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap.release()
+        preprocess_scale = config.target_height / original_height if original_height > 0 else 1.0
+
         viewer_video_name = "viewer_video.mp4"
         viewer_video_path = output / viewer_video_name
         try:
@@ -130,7 +137,7 @@ def main(
             click.echo(f"   ✓ 复制视频: {viewer_video_path}")
 
         viewer_data_path = visualizer.generate_viewer_data(
-            video, frame_results, output, viewer_video_name
+            video, frame_results, output, viewer_video_name, preprocess_scale
         )
         click.echo(f"   ✓ 输出: {viewer_data_path}")
 

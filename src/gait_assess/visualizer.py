@@ -80,6 +80,7 @@ class Visualizer:
         frame_results: list[FrameResult],
         output_dir: Path,
         viewer_video_name: str = "viewer_video.mp4",
+        preprocess_scale: float = 1.0,
     ) -> Path:
         """将 frame_results 序列化为 per-frame.json，供交互式查看器使用。"""
         cap = cv2.VideoCapture(str(video_path))
@@ -88,6 +89,9 @@ class Visualizer:
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         cap.release()
 
+        # 坐标放大倍数：将预处理后的坐标还原到原始视频尺寸
+        coord_scale = 1.0 / preprocess_scale if preprocess_scale > 0 else 1.0
+
         frames: list[dict[str, object]] = []
         for idx, fr in enumerate(frame_results):
             frame_data: dict[str, object] = {"frame_index": idx}
@@ -95,10 +99,18 @@ class Visualizer:
             has_detection = fr.bboxes.size > 0 and fr.keypoints.size > 0
 
             if has_detection:
-                bbox = fr.bboxes[0].tolist()
+                bbox_raw = fr.bboxes[0]
+                if coord_scale != 1.0:
+                    bbox = (bbox_raw * coord_scale).tolist()
+                    kpts = fr.keypoints[0].copy()
+                    kpts[:, :2] *= coord_scale  # 只缩放 x, y，confidence 不变
+                    keypoints = kpts.tolist()
+                else:
+                    bbox = bbox_raw.tolist()
+                    keypoints = fr.keypoints[0].tolist()
                 frame_data["bbox"] = bbox
                 frame_data["bbox_label"] = f"({int(bbox[0])}, {int(bbox[1])})"
-                frame_data["keypoints"] = fr.keypoints[0].tolist()
+                frame_data["keypoints"] = keypoints
             else:
                 frame_data["bbox"] = []
                 frame_data["bbox_label"] = ""
