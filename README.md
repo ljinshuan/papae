@@ -1,61 +1,63 @@
-# 婴幼儿姿态评估系统
+# Infant Posture Assessment System
 
 <p align="center">
-  <img src="logo.png" alt="婴幼儿姿态评估系统 Logo">
+  <img src="logo.png" alt="Infant Posture Assessment System Logo">
 </p>
 
-基于 YOLOv8-pose + YOLOv8-seg 和全模态大语言模型（Qwen-VL）的婴幼儿姿态评估命令行工具。
+English | [中文](README.zh.md)
 
-支持三种评估模式：走路步态分析、运动发育筛查、姿势矫正评估。输入家长录制的宝宝视频，输出结构化 Markdown 评估报告和带骨架/分割叠加的可视化视频。
+A command-line tool for infant posture assessment powered by YOLOv8-pose + YOLOv8-seg and a full-modal large language model (Qwen-VL).
 
-## 功能特性
+Supports three assessment modes: gait analysis, motor development screening, and posture correction evaluation. Input a parent-recorded video of your baby, and the tool outputs a structured Markdown assessment report along with a visualized video overlaid with skeleton and segmentation masks.
 
-- **三种评估模式**：
-  - `gait` — 走路步态分析：基于步态周期检测，评估走路姿态异常
-  - `developmental` — 运动发育筛查：按月龄匹配里程碑，筛查发育延迟风险
-  - `posture` — 姿势矫正评估：分析静态站立姿态的脊柱/肩膀/骨盆对称性
-- **视频预处理**：自动拆帧、模糊过滤、分辨率标准化
-- **姿态检测**：YOLOv8-pose 提取 17 个 COCO 关键点
-- **人体分割**：YOLOv8-seg 生成分割 mask
-- **步态分析**：基于脚踝轨迹检测步态周期，提取 4 个关键相位帧
-- **姿态计算**：膝关节角、踝关节角、脊柱倾角、骨盆倾斜、肩高差等
-- **LLM 评估**：多模态大模型端到端判断，视频 + 结构化姿态数据双通道输入
-- **可视化输出**：骨架连线、mask 叠加、关键帧标记
-- **报告生成**：结构化 Markdown 报告，含风险徽章、发现卡片、建议卡片、嵌入关键帧图片
+## Features
 
-## 安装
+- **Three Assessment Modes**:
+  - `gait` — Gait analysis: based on gait cycle detection, evaluates walking posture abnormalities
+  - `developmental` — Motor development screening: matches motor milestones by age to screen for developmental delay risks
+  - `posture` — Posture correction evaluation: analyzes spinal/shoulder/pelvic symmetry in static standing posture
+- **Video Preprocessing**: automatic frame splitting, blur filtering, resolution standardization
+- **Pose Detection**: YOLOv8-pose extracts 17 COCO keypoints
+- **Human Segmentation**: YOLOv8-seg generates segmentation masks
+- **Gait Analysis**: detects gait cycles based on ankle trajectory, extracts 4 key phase frames
+- **Pose Computation**: knee angle, ankle angle, spinal tilt, pelvic tilt, shoulder height difference, etc.
+- **LLM Assessment**: full-modal large model end-to-end evaluation with dual-channel input (video + structured pose data)
+- **Visualized Output**: skeleton overlay, mask overlay, key frame marking
+- **Report Generation**: structured Markdown report with risk badges, finding cards, suggestion cards, and embedded key frame images
 
-需要 Python >= 3.13。
+## Installation
+
+Requires Python >= 3.13.
 
 ```bash
-# 克隆仓库后安装依赖
+# Install dependencies after cloning
 uv sync --extra dev
 
-# 或安装到当前环境
+# Or install into the current environment
 uv pip install -e ".[dev]"
 ```
 
-## 使用方法
+## Usage
 
-### 基本用法
+### Basic Usage
 
 ```bash
-# 走路步态评估（默认模式）
+# Gait assessment (default mode)
 uv run gait-assess --video ./baby_walking.mp4 --output ./results/
 
-# 运动发育筛查（需指定月龄）
+# Motor development screening (requires age in months)
 uv run gait-assess --video ./baby_walking.mp4 --mode developmental --age-months 12 --output ./results/
 
-# 姿势矫正评估
+# Posture correction evaluation
 uv run gait-assess --video ./baby_standing.mp4 --mode posture --output ./results/
 ```
 
-### 环境变量配置
+### Environment Variable Configuration
 
-LLM 相关配置通过环境变量或 `.env` 文件读取：
+LLM-related configurations are read from environment variables or a `.env` file:
 
 ```bash
-# 方法 1：直接设置环境变量
+# Method 1: set environment variables directly
 export QWEN_API_KEY=your-api-key
 export GAIT_LLM_MODEL=qwen-vl-max
 export GAIT_LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
@@ -64,7 +66,7 @@ uv run gait-assess --video ./baby.mp4
 ```
 
 ```bash
-# 方法 2：使用 .env 文件（推荐）
+# Method 2: use a .env file (recommended)
 cat > .env << 'EOF'
 QWEN_API_KEY=your-api-key
 GAIT_LLM_MODEL=qwen-vl-max
@@ -74,7 +76,7 @@ EOF
 uv run gait-assess --video ./baby.mp4
 ```
 
-### 完整 CLI 参数
+### Full CLI Arguments
 
 ```bash
 uv run gait-assess \
@@ -90,9 +92,9 @@ uv run gait-assess \
 
 ## Python API
 
-除了命令行，你也可以在 Python 代码中直接调用评估流水线。
+In addition to the CLI, you can directly invoke the assessment pipeline in Python code.
 
-### 基本用法
+### Basic Usage
 
 ```python
 from pathlib import Path
@@ -111,47 +113,47 @@ print(result["video_path"])        # Path('.../annotated_video.mp4')
 print(result["assessment"].risk_level)  # "正常"
 ```
 
-### 模式专用函数
+### Mode-Specific Functions
 
 ```python
 from gait_assess import assess_gait, assess_developmental, assess_posture
 
-# 走路步态评估
+# Gait assessment
 gait_result = assess_gait("./baby.mp4", config)
 
-# 运动发育筛查（可省略 age_months，自动从姿态推断）
+# Motor development screening (age_months can be omitted, inferred from pose)
 dev_result = assess_developmental("./baby.mp4", config)
 
-# 姿势矫正评估
+# Posture correction evaluation
 posture_result = assess_posture("./baby.mp4", config)
 ```
 
-### 返回结果字段
+### Return Fields
 
-`assess()` 及各模式函数返回包含以下字段的字典：
+`assess()` and mode-specific functions return a dictionary containing the following fields:
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `report_path` | `Path` | Markdown 评估报告文件路径 |
-| `video_path` | `Path` | 带标注的可视化视频路径 |
-| `viewer_video_path` | `Path` | 交互式查看器用视频路径 |
-| `viewer_data_path` | `Path` | 每帧 JSON 数据路径 |
-| `viewer_html_path` | `Path \| None` | viewer.html 路径 |
-| `assessment` | `AssessmentResult` | LLM 评估结果（风险等级、发现、建议） |
-| `gait_cycle` | `GaitCycle` | 步态周期分析结果 |
-| `config` | `AppConfig` | 运行时的配置对象 |
-| `frames` | `list[np.ndarray]` | 预处理后的帧列表 |
-| `fps` | `float` | 视频帧率 |
-| `frame_results` | `list[FrameResult]` | 每帧的姿态检测/分割结果 |
+| Field | Type | Description |
+|-------|------|-------------|
+| `report_path` | `Path` | Markdown assessment report file path |
+| `video_path` | `Path` | Annotated visualization video path |
+| `viewer_video_path` | `Path` | Interactive viewer video path |
+| `viewer_data_path` | `Path` | Per-frame JSON data path |
+| `viewer_html_path` | `Path \| None` | viewer.html path |
+| `assessment` | `AssessmentResult` | LLM assessment result (risk level, findings, suggestions) |
+| `gait_cycle` | `GaitCycle` | Gait cycle analysis result |
+| `config` | `AppConfig` | Runtime configuration object |
+| `frames` | `list[np.ndarray]` | Preprocessed frame list |
+| `fps` | `float` | Video frame rate |
+| `frame_results` | `list[FrameResult]` | Per-frame pose detection/segmentation results |
 
-### 跳过 LLM（离线评估）
+### Skip LLM (Offline Assessment)
 
 ```python
 result = assess("./baby.mp4", config, skip_llm=True)
 # assessment.risk_level == "未知"
 ```
 
-### 错误处理
+### Error Handling
 
 ```python
 from gait_assess.api import AssessmentError
@@ -159,17 +161,17 @@ from gait_assess.api import AssessmentError
 try:
     result = assess("./baby.mp4", config)
 except AssessmentError as e:
-    print(f"阶段: {e.stage}")    # "preprocess" / "llm"
-    print(f"原因: {e.original}") # 原始异常
+    print(f"Stage: {e.stage}")    # "preprocess" / "llm"
+    print(f"Reason: {e.original}") # Original exception
 ```
 
-### 输出文件
+### Output Files
 
 ```
 results/
-├── report.md              # Markdown 评估报告（含风险徽章、发现/建议卡片）
-├── annotated_video.mp4    # 带标注的可视化视频
-├── viewer.html            # 交互式报告查看器
+├── report.md              # Markdown assessment report (with risk badges, finding/suggestion cards)
+├── annotated_video.mp4    # Annotated visualization video
+├── viewer.html            # Interactive report viewer
 └── keyframes/
     ├── keyframe_00_脚跟着地.jpg
     ├── keyframe_01_站立中期.jpg
@@ -177,64 +179,64 @@ results/
     └── keyframe_03_摆动中期.jpg
 ```
 
-## 拍摄建议
+## Recording Tips
 
-为获得最佳评估效果，请按以下建议录制视频：
+For the best assessment results, please follow these recording guidelines:
 
-- **光线**：选择光线充足、均匀的环境，避免逆光或强阴影
-- **距离**：手机/相机距离宝宝 2-3 米，确保全身入镜
-- **视角**：镜头高度与宝宝腰部平齐，正侧面拍摄效果最佳
-- **背景**：选择简洁背景，避免多人同时入镜
-- **时长**：录制至少 5-10 秒连续走路视频，让宝宝走 3-5 步以上
-- **服装**：避免过于宽松的衣物，建议短袖/短裤以便观察肢体
+- **Lighting**: choose a well-lit, evenly-lit environment; avoid backlight or strong shadows
+- **Distance**: place the phone/camera 2–3 meters from the baby, ensuring the whole body is in frame
+- **Angle**: camera height level with the baby's waist; a frontal or side view works best
+- **Background**: choose a simple background; avoid multiple people in the frame
+- **Duration**: record at least 5–10 seconds of continuous walking, with the baby taking 3–5+ steps
+- **Clothing**: avoid overly loose clothing; short sleeves/shorts are recommended for clear limb visibility
 
-## 项目结构
+## Project Structure
 
 ```
 src/gait_assess/
-  __init__.py          # 包入口
-  cli.py               # 命令行入口与流水线编排
-  models.py            # Pydantic 数据模型
-  preprocessor.py      # 视频拆帧、模糊过滤、标准化
-  pose_segmentor.py    # YOLO-pose + YOLO-seg 推理
-  gait_analyzer.py     # 步态周期检测、关键帧提取
-  pose_utils.py        # 关节角度、对称性、时序轨迹计算
-  llm_assessor.py      # 多模态 LLM 调用、Jinja2 模板渲染
-  visualizer.py        # 骨架/mask 叠加、视频编码
-  report_generator.py  # Markdown 报告生成
-  prompts/             # Jinja2 提示词模板
+  __init__.py          # Package entry
+  cli.py               # CLI entry and pipeline orchestration
+  models.py            # Pydantic data models
+  preprocessor.py      # Video frame splitting, blur filtering, standardization
+  pose_segmentor.py    # YOLO-pose + YOLO-seg inference
+  gait_analyzer.py     # Gait cycle detection, key frame extraction
+  pose_utils.py        # Joint angles, symmetry, temporal trajectory computation
+  llm_assessor.py      # Full-modal LLM call, Jinja2 template rendering
+  visualizer.py        # Skeleton/mask overlay, video encoding
+  report_generator.py  # Markdown report generation
+  prompts/             # Jinja2 prompt templates
     gait.jinja.md
     developmental.jinja.md
     posture.jinja.md
-models/                # YOLO 模型权重文件（*.pt，被 .gitignore 忽略）
+models/                # YOLO model weight files (*.pt, ignored by .gitignore)
 tests/
-  fixtures/            # 测试视频
-  test_*.py            # 各模块单元测试
+  fixtures/            # Test videos
+  test_*.py            # Unit tests for each module
 ```
 
-## 开发
+## Development
 
 ```bash
-# 使用 Makefile
-make help      # 查看所有命令
-make install   # 安装依赖
-make test      # 运行测试
-make typecheck # 运行类型检查
-make lint      # 运行代码格式检查
-make e2e       # 端到端验证（跳过 LLM）
-make e2e-full  # 端到端验证（含 LLM，需 API 密钥）
-make viewer    # 运行 e2e 并自动打开 viewer.html
-make clean     # 清理结果
+# Use Makefile
+make help      # Show all commands
+make install   # Install dependencies
+make test      # Run tests
+make typecheck # Run type check
+make lint      # Run code formatting check
+make e2e       # End-to-end validation (skip LLM)
+make e2e-full  # End-to-end validation (with LLM, requires API key)
+make viewer    # Run e2e and automatically open viewer.html
+make clean     # Clean results
 
-# 或直接运行
+# Or run directly
 uv run pytest
 uv run basedpyright src/
 ```
 
-## 免责声明
+## Disclaimer
 
-本工具仅供参考，不构成医学诊断。评估结果基于计算机视觉和大语言模型的分析，可能存在误差。如对宝宝走路姿态有疑虑，请务必咨询专业儿科医生或康复治疗师。
+This tool is for reference only and does not constitute a medical diagnosis. Assessment results are based on computer vision and large language model analysis and may contain errors. If you have concerns about your baby's walking posture, please consult a professional pediatrician or rehabilitation therapist.
 
-## 许可证
+## License
 
 MIT
