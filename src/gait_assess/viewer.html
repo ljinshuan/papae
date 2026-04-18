@@ -305,7 +305,7 @@
             videoWidth.value = data.width || 0;
             videoHeight.value = data.height || 0;
             frameData.value = data.frames || [];
-            frameData.value._video_filename = data.video_filename || 'video.mp4';
+            frameData.value._video_filename = data.viewer_video_filename || data.video_filename || 'video.mp4';
           } catch (e) {
             jsonError.value = '加载 per-frame.json 失败：' + e.message;
           }

@@ -191,6 +191,7 @@ class TestGenerateViewerData:
         assert "width" in data
         assert "height" in data
         assert "video_filename" in data
+        assert "viewer_video_filename" in data
         assert "frames" in data
         assert isinstance(data["frames"], list)
         assert data["frame_count"] == len(frame_results)

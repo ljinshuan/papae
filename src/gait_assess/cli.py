@@ -1,6 +1,7 @@
 """命令行入口与流水线编排。"""
 
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -106,7 +107,31 @@ def main(
         click.echo(f"   ✓ 输出: {video_path}")
 
         click.echo("📦 生成交互式查看器数据...")
-        viewer_data_path = visualizer.generate_viewer_data(video, frame_results, output)
+
+        viewer_video_name = "viewer_video.mp4"
+        viewer_video_path = output / viewer_video_name
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", str(video),
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                    "-c:a", "aac", "-b:a", "128k",
+                    "-movflags", "+faststart",
+                    str(viewer_video_path),
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            click.echo(f"   ✓ 转码视频: {viewer_video_path}")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            click.echo("   ⚠ ffmpeg 转码失败，回退到复制原始视频", err=True)
+            shutil.copy2(video, viewer_video_path)
+            click.echo(f"   ✓ 复制视频: {viewer_video_path}")
+
+        viewer_data_path = visualizer.generate_viewer_data(
+            video, frame_results, output, viewer_video_name
+        )
         click.echo(f"   ✓ 输出: {viewer_data_path}")
 
         viewer_html_src = Path(__file__).parent / "viewer.html"
@@ -117,10 +142,6 @@ def main(
             click.echo(f"   ✓ 输出: {viewer_html_dst}")
         else:
             click.echo(f"   ⚠ viewer.html 未找到: {viewer_html_src}", err=True)
-
-        video_dst = output / video.name
-        shutil.copy2(video, video_dst)
-        click.echo(f"   ✓ 输出: {video_dst}")
 
         click.echo("📝 步骤 6/6: 生成评估报告...")
         report_gen = ReportGenerator(config)

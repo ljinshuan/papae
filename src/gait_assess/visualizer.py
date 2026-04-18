@@ -79,6 +79,7 @@ class Visualizer:
         video_path: Path,
         frame_results: list[FrameResult],
         output_dir: Path,
+        viewer_video_name: str = "viewer_video.mp4",
     ) -> Path:
         """将 frame_results 序列化为 per-frame.json，供交互式查看器使用。"""
         cap = cv2.VideoCapture(str(video_path))
@@ -119,6 +120,7 @@ class Visualizer:
             "width": width,
             "height": height,
             "video_filename": video_path.name,
+            "viewer_video_filename": viewer_video_name,
             "frames": frames,
         }
 
