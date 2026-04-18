@@ -42,8 +42,10 @@ e2e-full:
 	$(CLI) --video $(VIDEO) --output $(OUTPUT)
 
 viewer: e2e
-	@echo "打开交互式查看器..."
-	@open $(OUTPUT)/viewer.html || xdg-open $(OUTPUT)/viewer.html || echo "请手动打开 $(OUTPUT)/viewer.html"
+	@echo "启动 HTTP 服务器并打开交互式查看器..."
+	@cd $(OUTPUT) && python3 -m http.server 8080 &
+	@sleep 2
+	@open http://localhost:8080/viewer.html || xdg-open http://localhost:8080/viewer.html || echo "请手动打开 http://localhost:8080/viewer.html"
 
 clean:
 	rm -rf $(OUTPUT)/ e2e_results/ .pytest_cache/ .coverage htmlcov/
