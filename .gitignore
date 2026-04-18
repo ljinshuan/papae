@@ -1,0 +1,85 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Environment variables
+.env
+.env.local
+
+# YOLO model weights (large files)
+*.pt
+*.pth
+*.onnx
+*.engine
+*.mlmodel
+*.tflite
+*.pb
+*.weights
+
+# Output / results
+results/
+output/
+outputs/
+runs/
+
+# Video files (large, except test fixtures)
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+
+# Data directory
+data/
+
+# basedpyright
+.pyrightconfig.json
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+
+.omc
+data
