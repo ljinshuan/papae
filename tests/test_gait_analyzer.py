@@ -33,7 +33,8 @@ class TestGaitAnalyzer:
     def test_extract_ankle_trajectories(self, config: AppConfig, frame_results: list[FrameResult]) -> None:
         """测试脚踝轨迹提取。"""
         analyzer = GaitAnalyzer(config)
-        left_y, right_y = analyzer._extract_ankle_trajectories(frame_results)
+        valid_mask = np.array([True] * len(frame_results))
+        left_y, right_y = analyzer._extract_ankle_trajectories(frame_results, valid_mask)
         assert len(left_y) == len(frame_results)
         assert len(right_y) == len(frame_results)
         assert not np.isnan(left_y).all()
@@ -49,6 +50,7 @@ class TestGaitAnalyzer:
     def test_fallback_sampling(self, config: AppConfig, frame_results: list[FrameResult]) -> None:
         """测试退化采样。"""
         analyzer = GaitAnalyzer(config)
-        key_frames = analyzer._fallback_sampling(frame_results)
+        valid_mask = np.array([True] * len(frame_results))
+        key_frames = analyzer._fallback_sampling(frame_results, valid_mask)
         assert len(key_frames) <= 8
         assert len(key_frames) > 0

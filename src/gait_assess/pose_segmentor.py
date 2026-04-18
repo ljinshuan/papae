@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import cv2
 import numpy as np
 from ultralytics import YOLO  # type: ignore[reportPrivateImportUsage]
 
@@ -94,8 +95,15 @@ class PoseSegmentor:
                 best_iou = iou
                 best_idx = i
 
-        # 将 mask 缩放到原始帧尺寸
+        # 将 mask 缩放到原始输入帧尺寸（与 pose 输入一致）
         mask = masks[best_idx]
+        orig_h, orig_w = result.orig_shape
+        if mask.shape != (orig_h, orig_w):
+            mask = cv2.resize(
+                mask.astype(np.float32),
+                (orig_w, orig_h),
+                interpolation=cv2.INTER_LINEAR,
+            )
         return [mask]
 
     @staticmethod

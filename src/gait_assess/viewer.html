@@ -456,6 +456,12 @@
           if (!mask) return null;
           if (maskCache.has(mask)) return maskCache.get(mask);
           const img = new Image();
+          img.onload = () => {
+            // mask 加载完成后触发重绘
+            if (lastDrawnFrame >= 0) {
+              drawAll();
+            }
+          };
           img.src = mask.startsWith('data:') ? mask : 'data:image/png;base64,' + mask;
           maskCache.set(mask, img);
           return img;
@@ -478,8 +484,8 @@
           const img = getMaskImage(mask);
           if (img && img.complete && img.naturalWidth > 0) {
             const off = document.createElement('canvas');
-            off.width = img.width;
-            off.height = img.height;
+            off.width = img.naturalWidth;
+            off.height = img.naturalHeight;
             const octx = off.getContext('2d');
             octx.drawImage(img, 0, 0);
             octx.globalCompositeOperation = 'source-in';

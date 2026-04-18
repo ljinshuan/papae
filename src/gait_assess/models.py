@@ -69,10 +69,10 @@ class AppConfig(BaseSettings):
     )
 
     yolo_pose_model: str = Field(
-        default="models/yolov8n-pose.pt", description="YOLO-pose 模型路径或名称"
+        default="models/yolov8m-pose.pt", description="YOLO-pose 模型路径或名称"
     )
     yolo_seg_model: str = Field(
-        default="models/yolov8n-seg.pt", description="YOLO-seg 模型路径或名称"
+        default="models/yolov8m-seg.pt", description="YOLO-seg 模型路径或名称"
     )
 
     conf_threshold: float = Field(

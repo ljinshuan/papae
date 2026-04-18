@@ -40,6 +40,8 @@ class TestCLI:
             mock_preprocessor_instance.process.return_value = (
                 [np.zeros((10, 10, 3), dtype=np.uint8)],
                 30.0,
+                1.0,
+                [150.0],
             )
             mock_preprocessor.return_value = mock_preprocessor_instance
 
@@ -151,6 +153,8 @@ class TestCLI:
             mock_preprocessor_instance.process.return_value = (
                 [np.zeros((10, 10, 3), dtype=np.uint8)],
                 30.0,
+                1.0,
+                [150.0],
             )
             mock_preprocessor.return_value = mock_preprocessor_instance
 
@@ -200,6 +204,8 @@ class TestCLI:
             mock_preprocessor_instance.process.return_value = (
                 [np.zeros((10, 10, 3), dtype=np.uint8)],
                 30.0,
+                1.0,
+                [150.0],
             )
             mock_preprocessor.return_value = mock_preprocessor_instance
 

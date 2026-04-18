@@ -13,12 +13,22 @@ class GaitAnalyzer:
         self.config = config
 
     def extract_cycles(
-        self, frame_results: list[FrameResult], fps: float
+        self,
+        frame_results: list[FrameResult],
+        fps: float,
+        frame_qualities: list[float] | None = None,
+        blur_threshold: float = 0.0,
     ) -> GaitCycle:
         """从姿态序列中提取步态周期和关键帧。"""
-        # 提取脚踝轨迹
+        if frame_qualities is None:
+            frame_qualities = [1.0] * len(frame_results)
+
+        # 构建清晰帧掩码
+        valid_mask = np.array([q >= blur_threshold for q in frame_qualities])
+
+        # 提取脚踝轨迹（只使用清晰帧）
         left_ankle_y, right_ankle_y = self._extract_ankle_trajectories(
-            frame_results
+            frame_results, valid_mask
         )
 
         # 尝试检测步态周期
@@ -28,8 +38,8 @@ class GaitAnalyzer:
             key_frames = self._extract_key_frames(frame_results, cycles)
             metrics = self._compute_metrics(cycles, fps, frame_results)
         else:
-            # 退化采样
-            key_frames = self._fallback_sampling(frame_results)
+            # 退化采样（在全部帧范围内均匀采样）
+            key_frames = self._fallback_sampling(frame_results, valid_mask)
             metrics = {"note": "步态周期未明确，基于采样帧评估"}
 
         return GaitCycle(
@@ -39,16 +49,18 @@ class GaitAnalyzer:
         )
 
     def _extract_ankle_trajectories(
-        self, frame_results: list[FrameResult]
+        self,
+        frame_results: list[FrameResult],
+        valid_mask: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """提取左右脚踝 Y 坐标轨迹，缺失时用线性插值。"""
+        """提取左右脚踝 Y 坐标轨迹，只使用清晰帧，缺失时用线性插值。"""
         n = len(frame_results)
         left_y = np.full(n, np.nan)
         right_y = np.full(n, np.nan)
 
         # COCO keypoint indices: left_ankle=15, right_ankle=16
         for i, fr in enumerate(frame_results):
-            if fr.keypoints.size == 0:
+            if not valid_mask[i] or fr.keypoints.size == 0:
                 continue
             kpts = fr.keypoints[0]  # 只取最大的人
             if kpts.shape[0] > 15 and kpts[15, 2] > 0:
@@ -167,9 +179,11 @@ class GaitAnalyzer:
         )
 
     def _fallback_sampling(
-        self, frame_results: list[FrameResult]
+        self,
+        frame_results: list[FrameResult],
+        valid_mask: np.ndarray | None = None,
     ) -> list[KeyFrame]:
-        """退化策略：均匀采样 8 帧。"""
+        """退化策略：在全部帧范围内均匀采样 8 帧，优先选择清晰帧。"""
         n = len(frame_results)
         if n == 0:
             return []
@@ -178,12 +192,26 @@ class GaitAnalyzer:
         key_frames: list[KeyFrame] = []
 
         for idx in indices:
-            fr = frame_results[idx]
+            # 如果当前帧模糊，尝试找最近的清晰帧
+            actual_idx = int(idx)
+            if valid_mask is not None and not valid_mask[actual_idx]:
+                # 找前后最近的清晰帧
+                best = actual_idx
+                best_dist = float("inf")
+                for j in range(n):
+                    if valid_mask[j]:
+                        dist = abs(j - actual_idx)
+                        if dist < best_dist:
+                            best_dist = dist
+                            best = j
+                actual_idx = best
+
+            fr = frame_results[actual_idx]
             if fr.keypoints.size == 0:
                 continue
             key_frames.append(
                 KeyFrame(
-                    frame_index=int(idx),
+                    frame_index=actual_idx,
                     phase_name="采样帧",
                     image=np.zeros((10, 10, 3), dtype=np.uint8),
                     keypoints=fr.keypoints[0],

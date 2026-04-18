@@ -68,8 +68,8 @@ def main(
     try:
         click.echo("🎬 步骤 1/6: 视频预处理...")
         preprocessor = VideoPreprocessor(config)
-        frames, fps = preprocessor.process(video)
-        click.echo(f"   ✓ 读取 {len(frames)} 帧，fps={fps:.1f}")
+        frames, fps, preprocess_scale, frame_qualities = preprocessor.process(video)
+        click.echo(f"   ✓ 读取 {len(frames)} 帧，fps={fps:.1f}, scale={preprocess_scale:.3f}")
 
         click.echo("🤖 步骤 2/6: 姿态检测与分割...")
         segmentor = PoseSegmentor(config)
@@ -79,7 +79,9 @@ def main(
 
         click.echo("📊 步骤 3/6: 步态周期分析...")
         analyzer = GaitAnalyzer(config)
-        gait_cycle = analyzer.extract_cycles(frame_results, fps)
+        gait_cycle = analyzer.extract_cycles(
+            frame_results, fps, frame_qualities, config.blur_threshold
+        )
         click.echo(f"   ✓ 检测周期数: {len(gait_cycle.cycle_periods)}")
         click.echo(f"   ✓ 关键帧数: {len(gait_cycle.key_frames)}")
 
@@ -104,16 +106,12 @@ def main(
 
         click.echo("🎨 步骤 5/6: 生成可视化视频...")
         visualizer = Visualizer(config)
-        video_path = visualizer.render(video, frame_results, gait_cycle, output)
+        video_path = visualizer.render(
+            video, frame_results, gait_cycle, output, preprocess_scale
+        )
         click.echo(f"   ✓ 输出: {video_path}")
 
         click.echo("📦 生成交互式查看器数据...")
-
-        # 计算预处理缩放比例（将坐标还原到原始视频尺寸）
-        cap = cv2.VideoCapture(str(video))
-        original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        cap.release()
-        preprocess_scale = config.target_height / original_height if original_height > 0 else 1.0
 
         viewer_video_name = "viewer_video.mp4"
         viewer_video_path = output / viewer_video_name

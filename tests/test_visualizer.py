@@ -145,6 +145,64 @@ class TestVisualizer:
             assert args[1] == "★ 站立中期"
             assert args[3] == cv2.FONT_HERSHEY_SIMPLEX
 
+    def test_ankle_trace_accumulation(self, config: AppConfig) -> None:
+        """验证脚踝轨迹会累积到 traces 中。"""
+        visualizer = Visualizer(config)
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+
+        kpts = np.zeros((1, 17, 3))
+        kpts[0, 15] = [100, 200, 0.9]  # 左踝
+        kpts[0, 16] = [120, 200, 0.9]  # 右踝
+
+        fr = FrameResult(keypoints=kpts, masks=[], bboxes=np.array([[40, 80, 160, 240]]))
+        phase_map: dict[int, str] = {}
+
+        visualizer._annotate_frame(frame, fr, 0, phase_map)
+
+        assert len(visualizer._ankle_traces[15]) == 1
+        assert visualizer._ankle_traces[15][0] == (100, 200)
+        assert len(visualizer._ankle_traces[16]) == 1
+        assert visualizer._ankle_traces[16][0] == (120, 200)
+
+    def test_ankle_trace_drawing(self, config: AppConfig) -> None:
+        """验证有轨迹时会调用 cv2.polylines。"""
+        visualizer = Visualizer(config)
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+
+        kpts = np.zeros((1, 17, 3))
+        kpts[0, 15] = [100, 200, 0.9]
+
+        fr = FrameResult(keypoints=kpts, masks=[], bboxes=np.array([[40, 80, 160, 240]]))
+        phase_map: dict[int, str] = {}
+
+        # 先填充轨迹
+        visualizer._ankle_traces[15].append((90, 190))
+        visualizer._ankle_traces[15].append((100, 200))
+
+        with patch("gait_assess.visualizer.cv2.polylines") as mock_poly:
+            visualizer._annotate_frame(frame, fr, 1, phase_map)
+            assert mock_poly.call_count == 1
+
+    def test_mask_annotator_used(self, config: AppConfig) -> None:
+        """验证有 mask 时会使用 sv.MaskAnnotator。"""
+        visualizer = Visualizer(config)
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+
+        kpts = np.zeros((1, 17, 3))
+        kpts[0, 0] = [50, 100, 0.9]
+        mask = np.ones((240, 320), dtype=np.float32) * 0.8
+        fr = FrameResult(
+            keypoints=kpts,
+            masks=[mask],
+            bboxes=np.array([[40, 80, 100, 120]]),
+        )
+        phase_map: dict[int, str] = {}
+
+        with patch("gait_assess.visualizer._MASK_ANNOTATOR.annotate") as mock_annotate:
+            mock_annotate.return_value = frame
+            visualizer._annotate_frame(frame, fr, 0, phase_map)
+            assert mock_annotate.call_count == 1
+
 
 class TestGenerateViewerData:
     """generate_viewer_data() 测试。"""

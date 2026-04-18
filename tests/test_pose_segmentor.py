@@ -57,6 +57,8 @@ class TestPoseSegmentor:
             seg_result.masks.data = _mock_tensor(mask)
             seg_result.boxes = MagicMock()
             seg_result.boxes.xyxy = _mock_tensor(seg_bbox)
+            seg_result.orig_shape = (480, 640)
+            seg_result.orig_shape = (480, 640)
 
             mock_pose.return_value = [pose_result]
             mock_seg.return_value = [seg_result]
@@ -68,6 +70,7 @@ class TestPoseSegmentor:
             assert results[0].bboxes.shape == (1, 4)
             assert results[0].keypoints.shape == (1, 17, 3)
             assert len(results[0].masks) == 1
+            assert results[0].masks[0].shape == (480, 640)
             np.testing.assert_array_equal(results[0].bboxes, bbox)
             np.testing.assert_array_equal(results[0].keypoints, kpts)
 
@@ -107,6 +110,7 @@ class TestPoseSegmentor:
             seg_result.masks.data = _mock_tensor(mask)
             seg_result.boxes = MagicMock()
             seg_result.boxes.xyxy = _mock_tensor(seg_bbox)
+            seg_result.orig_shape = (480, 640)
 
             mock_pose.return_value = [pose_result]
             mock_seg.return_value = [seg_result]
@@ -185,6 +189,7 @@ class TestPoseSegmentor:
             seg_result.masks.data = _mock_tensor(mask)
             seg_result.boxes = MagicMock()
             seg_result.boxes.xyxy = _mock_tensor(seg_bbox)
+            seg_result.orig_shape = (480, 640)
 
             mock_pose.return_value = [pose_result]
             mock_seg.return_value = [seg_result]
