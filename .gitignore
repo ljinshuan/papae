@@ -91,3 +91,6 @@ custom_output/
 
 # openspec archives
 openspec/changes/archive/
+
+data/
+openspec/
