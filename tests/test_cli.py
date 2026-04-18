@@ -7,79 +7,43 @@ import numpy as np
 import pytest
 from click.testing import CliRunner
 
+from gait_assess.api import AssessmentError
 from gait_assess.cli import main
 from gait_assess.llm_assessor import LLMError
-from gait_assess.models import AppConfig, AssessmentResult, FrameResult, GaitCycle, KeyFrame
+from gait_assess.models import AppConfig, AssessmentResult, GaitCycle, KeyFrame
 from gait_assess.preprocessor import VideoNotFoundError
 
 
-def _make_mock_preprocessor() -> MagicMock:
-    instance = MagicMock()
-    instance.process.return_value = (
-        [np.zeros((10, 10, 3), dtype=np.uint8)],
-        30.0,
-        1.0,
-        [150.0],
-    )
-    mock = MagicMock(return_value=instance)
-    return mock
-
-
-def _make_mock_segmentor() -> MagicMock:
-    instance = MagicMock()
-    instance.infer.return_value = [
-        FrameResult(
-            keypoints=np.zeros((1, 17, 3)),
-            masks=[],
-            bboxes=np.zeros((1, 4)),
-        )
-    ]
-    mock = MagicMock(return_value=instance)
-    return mock
-
-
-def _make_mock_analyzer(metrics: dict | None = None) -> MagicMock:
-    instance = MagicMock()
-    instance.extract_cycles.return_value = GaitCycle(
-        key_frames=[
-            KeyFrame(
-                frame_index=0,
-                phase_name="test",
-                image=np.zeros((10, 10, 3), dtype=np.uint8),
-            )
-        ],
-        cycle_periods=[(0, 1)],
-        metrics=metrics or {},
-    )
-    mock = MagicMock(return_value=instance)
-    return mock
-
-
-def _make_mock_assessor() -> MagicMock:
-    instance = MagicMock()
-    instance.assess.return_value = AssessmentResult(
-        risk_level="正常",
-        findings=[],
-        recommendations=[],
-        raw_response="",
-    )
-    mock = MagicMock(return_value=instance)
-    return mock
-
-
-def _make_mock_visualizer() -> MagicMock:
-    instance = MagicMock()
-    instance.render.return_value = Path("video.mp4")
-    instance.generate_viewer_data.return_value = Path("per-frame.json")
-    mock = MagicMock(return_value=instance)
-    return mock
-
-
-def _make_mock_report_gen() -> MagicMock:
-    instance = MagicMock()
-    instance.generate.return_value = Path("report.md")
-    mock = MagicMock(return_value=instance)
-    return mock
+def _make_assess_result(config: AppConfig) -> dict:
+    """构造 api.assess() 的成功返回值。"""
+    return {
+        "report_path": config.output / "report.md",
+        "video_path": config.output / "annotated_video.mp4",
+        "viewer_video_path": config.output / "viewer_video.mp4",
+        "viewer_data_path": config.output / "per-frame.json",
+        "viewer_html_path": config.output / "viewer.html",
+        "assessment": AssessmentResult(
+            risk_level="正常",
+            findings=["finding"],
+            recommendations=["rec"],
+            raw_response="ok",
+        ),
+        "gait_cycle": GaitCycle(
+            key_frames=[
+                KeyFrame(
+                    frame_index=0,
+                    phase_name="test",
+                    image=np.zeros((10, 10, 3), dtype=np.uint8),
+                )
+            ],
+            cycle_periods=[(0, 1)],
+            metrics={"步频": 60},
+        ),
+        "config": config,
+        "frames": [np.zeros((10, 10, 3), dtype=np.uint8)],
+        "fps": 30.0,
+        "frame_results": [],
+    }
 
 
 class TestCLI:
@@ -96,15 +60,12 @@ class TestCLI:
         return video
 
     def test_argument_parsing(self, runner: CliRunner, dummy_video: Path) -> None:
-        """验证所有 CLI 参数正确解析。"""
-        with (
-            patch("gait_assess.cli.VideoPreprocessor", _make_mock_preprocessor()) as mock_preprocessor,
-            patch("gait_assess.cli.PoseSegmentor", _make_mock_segmentor()),
-            patch("gait_assess.cli.GaitAnalyzer", _make_mock_analyzer()),
-            patch("gait_assess.cli.LLMAssessor", _make_mock_assessor()),
-            patch("gait_assess.cli.Visualizer", _make_mock_visualizer()),
-            patch("gait_assess.cli.ReportGenerator", _make_mock_report_gen()),
-        ):
+        """验证所有 CLI 参数正确解析并传给 api.assess()。"""
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.return_value = _make_assess_result(
+                AppConfig(video=dummy_video, output=Path("./custom_output"))
+            )
+
             result = runner.invoke(
                 main,
                 [
@@ -132,8 +93,9 @@ class TestCLI:
             )
 
             assert result.exit_code == 0
+            assert mock_assess.called
 
-            config_call = mock_preprocessor.call_args[0][0]
+            config_call = mock_assess.call_args[0][1]
             assert isinstance(config_call, AppConfig)
             assert config_call.video == dummy_video
             assert config_call.output == Path("./custom_output")
@@ -148,12 +110,8 @@ class TestCLI:
 
     def test_missing_video(self, runner: CliRunner, dummy_video: Path) -> None:
         """验证不存在的视频返回退出码 3。"""
-        with patch("gait_assess.cli.VideoPreprocessor") as mock_preprocessor:
-            mock_preprocessor_instance = MagicMock()
-            mock_preprocessor_instance.process.side_effect = VideoNotFoundError(
-                "视频不存在"
-            )
-            mock_preprocessor.return_value = mock_preprocessor_instance
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.side_effect = VideoNotFoundError("视频不存在")
 
             result = runner.invoke(main, ["--video", str(dummy_video)])
             assert result.exit_code == 3
@@ -161,66 +119,51 @@ class TestCLI:
 
     def test_invalid_api_key(self, runner: CliRunner, dummy_video: Path) -> None:
         """验证无效 API 密钥返回退出码 5。"""
-        with (
-            patch("gait_assess.cli.VideoPreprocessor", _make_mock_preprocessor()),
-            patch("gait_assess.cli.PoseSegmentor", _make_mock_segmentor()),
-            patch("gait_assess.cli.GaitAnalyzer", _make_mock_analyzer()),
-            patch("gait_assess.cli.LLMAssessor") as mock_assessor,
-        ):
-            mock_assessor_instance = MagicMock()
-            mock_assessor_instance.assess.side_effect = LLMError("无效的 API 密钥")
-            mock_assessor.return_value = mock_assessor_instance
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.side_effect = AssessmentError(
+                "API 调用失败", stage="llm", original=LLMError("无效的 API 密钥")
+            )
 
             result = runner.invoke(main, ["--video", str(dummy_video)])
             assert result.exit_code == 5
             assert "错误" in result.output
 
     def test_success_flow(self, runner: CliRunner, dummy_video: Path) -> None:
-        """使用 mock 替代所有流水线组件，验证成功流程输出。"""
-        with (
-            patch("gait_assess.cli.VideoPreprocessor", _make_mock_preprocessor()),
-            patch("gait_assess.cli.PoseSegmentor", _make_mock_segmentor()),
-            patch("gait_assess.cli.GaitAnalyzer", _make_mock_analyzer({"步频": 60})),
-            patch("gait_assess.cli.LLMAssessor", _make_mock_assessor()),
-            patch("gait_assess.cli.Visualizer", _make_mock_visualizer()),
-            patch("gait_assess.cli.ReportGenerator", _make_mock_report_gen()),
-        ):
+        """验证成功流程输出。"""
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.return_value = _make_assess_result(
+                AppConfig(video=dummy_video, output=Path("./results"))
+            )
+
             result = runner.invoke(main, ["--video", str(dummy_video)])
 
             assert result.exit_code == 0
             assert "评估完成" in result.output
             assert "正常" in result.output
             assert "report.md" in result.output
-            assert "video.mp4" in result.output
 
     def test_mode_argument(self, runner: CliRunner, dummy_video: Path) -> None:
         """验证 --mode 参数正确解析并影响配置。"""
-        with (
-            patch("gait_assess.cli.VideoPreprocessor", _make_mock_preprocessor()) as mock_preprocessor,
-            patch("gait_assess.cli.PoseSegmentor", _make_mock_segmentor()),
-            patch("gait_assess.cli.GaitAnalyzer", _make_mock_analyzer()),
-            patch("gait_assess.cli.LLMAssessor", _make_mock_assessor()),
-            patch("gait_assess.cli.Visualizer", _make_mock_visualizer()),
-            patch("gait_assess.cli.ReportGenerator", _make_mock_report_gen()),
-        ):
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.return_value = _make_assess_result(
+                AppConfig(video=dummy_video, output=Path("./results"))
+            )
+
             for mode in ["gait", "developmental", "posture"]:
                 result = runner.invoke(
                     main, ["--video", str(dummy_video), "--mode", mode]
                 )
                 assert result.exit_code == 0, f"mode={mode} failed"
-                config_call = mock_preprocessor.call_args[0][0]
+                config_call = mock_assess.call_args[0][1]
                 assert config_call.assessment_mode == mode
 
     def test_age_months_argument(self, runner: CliRunner, dummy_video: Path) -> None:
         """验证 --age-months 参数正确解析。"""
-        with (
-            patch("gait_assess.cli.VideoPreprocessor", _make_mock_preprocessor()) as mock_preprocessor,
-            patch("gait_assess.cli.PoseSegmentor", _make_mock_segmentor()),
-            patch("gait_assess.cli.GaitAnalyzer", _make_mock_analyzer()),
-            patch("gait_assess.cli.LLMAssessor", _make_mock_assessor()),
-            patch("gait_assess.cli.Visualizer", _make_mock_visualizer()),
-            patch("gait_assess.cli.ReportGenerator", _make_mock_report_gen()),
-        ):
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.return_value = _make_assess_result(
+                AppConfig(video=dummy_video, output=Path("./results"))
+            )
+
             result = runner.invoke(
                 main,
                 [
@@ -233,21 +176,31 @@ class TestCLI:
                 ],
             )
             assert result.exit_code == 0
-            config_call = mock_preprocessor.call_args[0][0]
+            config_call = mock_assess.call_args[0][1]
             assert config_call.child_age_months == 24
             assert config_call.assessment_mode == "developmental"
 
     def test_default_mode_is_gait(self, runner: CliRunner, dummy_video: Path) -> None:
         """验证不传 --mode 时默认使用 gait 模式。"""
-        with (
-            patch("gait_assess.cli.VideoPreprocessor", _make_mock_preprocessor()) as mock_preprocessor,
-            patch("gait_assess.cli.PoseSegmentor", _make_mock_segmentor()),
-            patch("gait_assess.cli.GaitAnalyzer", _make_mock_analyzer()),
-            patch("gait_assess.cli.LLMAssessor", _make_mock_assessor()),
-            patch("gait_assess.cli.Visualizer", _make_mock_visualizer()),
-            patch("gait_assess.cli.ReportGenerator", _make_mock_report_gen()),
-        ):
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.return_value = _make_assess_result(
+                AppConfig(video=dummy_video, output=Path("./results"))
+            )
+
             result = runner.invoke(main, ["--video", str(dummy_video)])
             assert result.exit_code == 0
-            config_call = mock_preprocessor.call_args[0][0]
+            config_call = mock_assess.call_args[0][1]
             assert config_call.assessment_mode == "gait"
+
+    def test_skip_llm(self, runner: CliRunner, dummy_video: Path) -> None:
+        """验证 --skip-llm 正确传给 api.assess()。"""
+        with patch("gait_assess.cli.assess") as mock_assess:
+            mock_assess.return_value = _make_assess_result(
+                AppConfig(video=dummy_video, output=Path("./results"))
+            )
+
+            result = runner.invoke(
+                main, ["--video", str(dummy_video), "--skip-llm"]
+            )
+            assert result.exit_code == 0
+            assert mock_assess.call_args[1]["skip_llm"] is True

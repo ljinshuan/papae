@@ -84,6 +84,81 @@ uv run gait-assess \
   --min-duration 3.0
 ```
 
+## Python API
+
+除了命令行，你也可以在 Python 代码中直接调用评估流水线。
+
+### 基本用法
+
+```python
+from pathlib import Path
+from gait_assess import assess, AppConfig
+
+config = AppConfig(
+    video=Path("./baby.mp4"),
+    output=Path("./results"),
+    llm_api_key="your-api-key",
+)
+
+result = assess("./baby.mp4", config)
+
+print(result["report_path"])       # Path('.../report.md')
+print(result["video_path"])        # Path('.../annotated_video.mp4')
+print(result["assessment"].risk_level)  # "正常"
+```
+
+### 模式专用函数
+
+```python
+from gait_assess import assess_gait, assess_developmental, assess_posture
+
+# 走路步态评估
+gait_result = assess_gait("./baby.mp4", config)
+
+# 运动发育筛查（可省略 age_months，自动从姿态推断）
+dev_result = assess_developmental("./baby.mp4", config)
+
+# 姿势矫正评估
+posture_result = assess_posture("./baby.mp4", config)
+```
+
+### 返回结果字段
+
+`assess()` 及各模式函数返回包含以下字段的字典：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `report_path` | `Path` | Markdown 评估报告文件路径 |
+| `video_path` | `Path` | 带标注的可视化视频路径 |
+| `viewer_video_path` | `Path` | 交互式查看器用视频路径 |
+| `viewer_data_path` | `Path` | 每帧 JSON 数据路径 |
+| `viewer_html_path` | `Path \| None` | viewer.html 路径 |
+| `assessment` | `AssessmentResult` | LLM 评估结果（风险等级、发现、建议） |
+| `gait_cycle` | `GaitCycle` | 步态周期分析结果 |
+| `config` | `AppConfig` | 运行时的配置对象 |
+| `frames` | `list[np.ndarray]` | 预处理后的帧列表 |
+| `fps` | `float` | 视频帧率 |
+| `frame_results` | `list[FrameResult]` | 每帧的姿态检测/分割结果 |
+
+### 跳过 LLM（离线评估）
+
+```python
+result = assess("./baby.mp4", config, skip_llm=True)
+# assessment.risk_level == "未知"
+```
+
+### 错误处理
+
+```python
+from gait_assess.api import AssessmentError
+
+try:
+    result = assess("./baby.mp4", config)
+except AssessmentError as e:
+    print(f"阶段: {e.stage}")    # "preprocess" / "llm"
+    print(f"原因: {e.original}") # 原始异常
+```
+
 ### 输出文件
 
 ```

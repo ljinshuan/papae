@@ -67,12 +67,14 @@ YOLO 模型权重文件（*.pt）存放于 `models/` 目录，默认配置自动
 单向流水线（Pipeline），组件依次执行：
 
 ```
-cli.py ──► preprocessor.py ──► pose_segmentor.py ──► gait_analyzer.py
+cli.py ──► api.py ──► preprocessor.py ──► pose_segmentor.py ──► gait_analyzer.py
                           │                           │
                           └──────► pose_utils.py ◄────┘
                                               │
 report_generator.py ◄── visualizer.py ◄── llm_assessor.py
 ```
+
+`api.py` 提供程序化接口层（`assess()` 及各模式专用函数），封装完整流水线供其他 Python 项目导入使用。CLI 入口也可通过 `api.assess()` 调用，实现命令行与程序化接口统一。
 
 数据通过 Pydantic 模型在组件间传递（定义在 `models.py`）：
 - `FrameResult` — 每帧的姿态关键点、分割 mask、检测框
@@ -99,6 +101,7 @@ report_generator.py ◄── visualizer.py ◄── llm_assessor.py
 ```
 src/gait_assess/
   __init__.py
+  api.py              # 程序化接口层（assess() 及模式专用函数）
   cli.py              # 命令行入口与流水线编排
   models.py           # Pydantic 数据模型
   preprocessor.py     # 视频拆帧、模糊过滤、标准化
