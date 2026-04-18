@@ -8,7 +8,7 @@ import click
 
 from gait_assess.gait_analyzer import GaitAnalyzer
 from gait_assess.llm_assessor import LLMAssessor, LLMError
-from gait_assess.models import AppConfig
+from gait_assess.models import AppConfig, AssessmentResult
 from gait_assess.pose_segmentor import PoseSegmentor
 from gait_assess.preprocessor import (
     VideoNotFoundError,
@@ -31,6 +31,7 @@ from gait_assess.visualizer import Visualizer
 @click.option("--blur-threshold", default=100.0, type=float, help="模糊帧阈值")
 @click.option("--target-height", default=720, type=int, help="标准化目标高度")
 @click.option("--min-duration", default=3.0, type=float, help="视频最小时长（秒）")
+@click.option("--skip-llm", is_flag=True, help="跳过 LLM 评估（仅生成可视化视频和报告）")
 def main(
     video: Path,
     output: Path,
@@ -42,6 +43,7 @@ def main(
     blur_threshold: float,
     target_height: int,
     min_duration: float,
+    skip_llm: bool,
 ) -> None:
     """婴幼儿走路姿态评估工具。"""
     start_time = time.time()
@@ -83,9 +85,18 @@ def main(
             if 0 <= kf.frame_index < len(frames):
                 kf.image = frames[kf.frame_index]
 
-        click.echo("🧠 步骤 4/6: LLM 评估...")
-        assessor = LLMAssessor(config)
-        assessment = assessor.assess(gait_cycle)
+        if skip_llm:
+            click.echo("🧠 步骤 4/6: LLM 评估 (已跳过)")
+            assessment = AssessmentResult(
+                risk_level="未知",
+                findings=["LLM 评估已跳过"],
+                recommendations=["如需完整评估请提供 API 密钥"],
+                raw_response="skip_llm",
+            )
+        else:
+            click.echo("🧠 步骤 4/6: LLM 评估...")
+            assessor = LLMAssessor(config)
+            assessment = assessor.assess(gait_cycle)
         click.echo(f"   ✓ 风险等级: {assessment.risk_level}")
 
         click.echo("🎨 步骤 5/6: 生成可视化视频...")

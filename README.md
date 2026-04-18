@@ -101,14 +101,17 @@ tests/
 ## 开发
 
 ```bash
-# 运行测试
+# 使用 Makefile
+make help      # 查看所有命令
+make install   # 安装依赖
+make test      # 运行测试
+make typecheck # 运行类型检查
+make e2e       # 端到端验证（跳过 LLM）
+make clean     # 清理结果
+
+# 或直接运行
 uv run pytest
-
-# 运行类型检查
 uv run basedpyright src/
-
-# 运行单测
-uv run pytest tests/test_gait_analyzer.py -v
 ```
 
 ## 免责声明

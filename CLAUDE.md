@@ -33,6 +33,15 @@ uv pip install -e ".[dev]"
 uv run gait-assess --video ./baby.mp4 --output ./results/
 ```
 
+或使用 Makefile：
+
+```bash
+make install   # 安装依赖
+make test      # 运行测试
+make typecheck # 类型检查
+make e2e       # 端到端验证（跳过 LLM）
+```
+
 ## Model Weights
 
 YOLO 模型权重文件（*.pt）存放于 `models/` 目录，默认配置自动使用该目录下的模型：
