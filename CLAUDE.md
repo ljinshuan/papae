@@ -52,7 +52,22 @@ make install   # 安装依赖
 make test      # 运行测试
 make typecheck # 类型检查
 make e2e       # 端到端验证（跳过 LLM）
+make clean     # 清理结果目录和缓存
 ```
+
+### 环境注意事项
+
+**VIRTUAL_ENV 冲突**：如果 `uv run` 出现 `VIRTUAL_ENV does not match the project environment path` 警告，说明 shell 中设置了指向其他项目的 `VIRTUAL_ENV` 变量。运行前先取消设置：
+
+```bash
+unset VIRTUAL_ENV
+uv run gait-assess --video ./baby.mp4 --output ./results/
+```
+
+**端到端测试规范**：
+- 结果统一输出到 `./results/` 目录
+- 每次运行前清理旧数据，避免新旧结果混杂：`make clean && make e2e`
+- `make clean` 会删除 `$(OUTPUT)/`（默认 `./results/`）、`e2e_results/`、`.pytest_cache/` 等
 
 ## Model Weights
 
